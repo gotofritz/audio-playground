@@ -1,0 +1,13 @@
+# Changes here will be overwritten by Copier; NEVER EDIT MANUALLY
+_commit: 4d37b06
+_src_path: https://github.com/gotofritz/copier-python-template
+author_email: gotofritz@users.noreply.github.com
+author_name: gotofritz
+cli: true
+org_name: gotofritz
+package_name: audio_playground
+project_description: Playing with sam-audio
+project_name: audio-playground
+project_url: https://github.com/gotofritz/audio-playground
+python_version: '3.12'
+with_conventional_commits: true
