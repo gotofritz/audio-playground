@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import click
 import torch
 import torchaudio
@@ -41,7 +43,7 @@ def test_run(
         )
 
         # Load and process
-        audio_path = "/Users/fritz/work/sam-audio-playground/wav/"
+        audio_path = (Path(".").parent / "wav").absolute().as_posix
         source_path = audio_path + "sources/"
         dest_path = audio_path + "processed/"
 

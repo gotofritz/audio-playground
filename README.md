@@ -4,11 +4,15 @@ Playing with sam-audio
 
 ## 📋 Overview
 
-audio-playground is a Python application/package that demonstrates modern Python development practices with fast dependency management, comprehensive testing, and automated quality checks.
+`audio-playground` is a research environment for experimenting with Meta's SAM-Audio model. Due to specific hardware and compiler requirements on M1/M2/M3 Macs, this project uses **Conda** to manage C++ dependencies (FFmpeg) and **PyTorch Nightly** builds to ensure compatibility.
+
+The best way of running this is is as a subfolder of a conda project, as described [in this blog post](https://gotofritz.net/blog/2025-12-20-playing-with-the-sam-audio-model-on-my-m1-macbook/)
 
 ## 🎁 Features
 
-- 📦 **Modern Python packaging** using [UV](https://github.com/astral-sh/uv) for lightning-fast dependency management
+- 🐍 **Conda-powered environment** for robust binary and C++ dependency management
+- 🔊 **SAM-Audio Integration** for advanced audio separation and generation
+- 🍎 **macOS Optimized** setup using PyTorch Nightly and TorchCodec binaries
 - ⚡️ **Streamlined task execution** with [Task](https://taskfile.dev/)
 - ✍️ **Code formatting and linting** with [Ruff](https://github.com/charliermarsh/ruff)
 - 🔍 **Type checking** with [Mypy](https://github.com/python/mypy)
@@ -22,33 +26,77 @@ audio-playground is a Python application/package that demonstrates modern Python
 
 ### Prerequisites
 
-- Python 3.13+
-- [UV](https://github.com/astral-sh/uv) installed globally
+- macOS (Apple Silicon)
+- [Miniconda](https://docs.anaconda.com/miniconda/) or Anaconda installed
+- [Task](https://taskfile.dev/) (optional, for automation)
 
-### Installation
+### Installation & Environment Setup
+
+Because this project relies on local patches for Meta's research repos, the setup must be done in a specific order:
 
 1. **Clone the repository:**
 
-   ```sh
-   git clone https://github.com/gotofritz/audio-playground.git
-   cd  audio-playground
-   ```
+```sh
+git clone https://github.com/gotofritz/audio-playground.git
+cd audio-playground
+```
 
-2. **Install dependencies:**
+1. **Create and initialize the Conda environment:**
 
-   ```sh
-   uv sync
-   ```
+```sh
+conda create -n sam-audio python=3.12 -y
+conda activate sam-audio
 
-3. **Activate the virtual environment:**
+# Optional: make pip work smoothly inside conda
+conda env config vars set PIP_REQUIRE_VIRTUALENV=false
+conda activate sam-audio
+```
 
-   ```sh
-   # On Unix/macOS
-   source .venv/bin/activate
+1. **Install Core macOS Dependencies:**
 
-   # On Windows
-   .venv\Scripts\activate
-   ```
+```sh
+# Install project-specific FFmpeg
+conda install -c conda-forge ffmpeg=7.1 -y
+
+# Install Nightly PyTorch & TorchCodec (Critical for M1/M2/M3)
+pip install --pre torch torchvision torchaudio --index-url https://download.pytorch.org/whl/nightly/cpu --force-reinstall
+pip install --pre torchcodec --index-url https://download.pytorch.org/whl/nightly/cpu
+
+```
+
+1. **Install Local & Research Dependencies:**
+   Ensure you have your patched versions of `sam-audio` and `perception-models` available locally.
+
+```sh
+# Install research modules
+pip install git+https://github.com/facebookresearch/ImageBind.git
+pip install av --no-binary av
+
+# Install this project in editable mode
+pip install -e . --no-deps
+```
+
+## 🖥️ CLI Usage
+
+`audio-playground` provides a CLI to run audio separation tasks:
+
+```sh
+# Show available commands
+audio-playground --help
+
+# Run the separation test suite
+audio-playground test-run
+```
+
+Example usage:
+
+```sh
+❯ audio-playground test-run
+2025-12-24 18:28:24 [INFO] Starting...
+2025-12-24 18:28:24 [INFO] Using mps device
+...
+2025-12-24 18:28:30 [INFO] Done. Results saved to ./wav/processed/
+```
 
 ### Development Setup
 
@@ -70,134 +118,51 @@ audio-playground is a Python application/package that demonstrates modern Python
    task qa
    ```
 
-## 🖥️ CLI Usage
-
-audio-playground includes a command-line interface for easy interaction:
-
-```sh
-# Show available commands
-uv run audio-playground --help
-
-# Run a simple command
-uv run audio-playground test-run
-
-# Use subcommands
-uv run audio-playground subcommand --help
-```
-
-Example usage:
-
-```sh
-❯ uv run audio-playground --help
-Usage: audio-playground [OPTIONS] COMMAND [ARGS]...
-
-  Main entry point for the CLI.
-
-Options:
-  -v, --version  Show the version and exit.
-  -h, --help     Show this message and exit.
-
-Commands:
-  simple-command  This is a simple command.
-  subcommand      This contains sub-subcommands
-```
-
 ## 🛠️ Development
-
-### Available Commands
-
-This project uses various tools for development. Here are the most common commands:
-
-```sh
-# Install dependencies
-uv sync
-
-# Run tests with coverage
-task test
-
-# open the code coverage in a web browser
-task coverage
-
-# Format code with ruff
-task lint-fix
-
-# Lint code
-task qa
-
-# Run pre-commit on all files
-uv run pre-commit run --all-files
-```
 
 ### Project Structure
 
 ```
 audio-playground/
-├── audio-playground/                  # Main package
-│   ├── cli/               # CLI commands
-│   └── ...                # Other modules
+├── audio_playground/      # Main package
+│   ├── cli/               # CLI commands and entry points
+│   ├── config/            # Pydantic-settings configuration
+│   └── ...                # Logic modules
 ├── tests/                 # Test suite
-├── pyproject.toml        # Project configuration
-└── README.md             # This file
+├── pyproject.toml         # Build system & metadata
+└── README.md              # This file
+
 ```
 
-### Making Changes
-
-1. **Create a feature branch:**
-
-   ```sh
-   git checkout -b feature/your-feature-name
-   ```
-
-2. **Make your changes** and ensure tests pass:
-
-   ```sh
-   uv run pytest
-   ```
-
-3. **Commit using conventional commits:**
-
-   ```sh
-   git commit -m "feat: add new feature"
-   ```
-
-4. **Push and create a pull request.**
-
-### Versioning
-
-This project follows [Semantic Versioning](https://semver.org/) and uses [Conventional Commits](https://www.conventionalcommits.org/) for automated changelog generation.
-
-To create a new release:
+### Common Commands
 
 ```sh
-uv run cz bump
-git push --follow-tags
+# Run tests
+task test
+
+# Linting and Type checking
+task qa
+
+# Set environment to offline mode (for HuggingFace)
+conda env config vars set HF_DATASETS_OFFLINE=1
+conda env config vars set TRANSFORMERS_OFFLINE=1
+
 ```
 
 ## 🧪 Testing
 
-Run the full test suite:
+The project uses `pytest`. Ensure your environment is active:
 
 ```sh
-# Run all tests
-task test
+pytest tests/
+
 ```
-
-## 📝 Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests for new functionality
-5. Ensure all tests pass and code quality checks succeed
-6. Submit a pull request
 
 ## 📄 License
 
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see the [LICENSE](https://www.google.com/search?q=LICENSE) file for details.
 
 ## 🔗 Links
 
-- **Homepage:** [https://github.com/gotofritz/audio-playground](https://github.com/gotofritz/audio-playground)
-- **Documentation:** [https://github.com/gotofritz/audio-playground](https://github.com/gotofritz/audio-playground)
-- **Issues:** [https://github.com/gotofritz/audio-playground/issues](https://github.com/gotofritz/audio-playground/issues)
-- **Changelog:** [CHANGELOG.md](CHANGELOG.md)
+- **Main Project:** [https://github.com/gotofritz/audio-playground](https://github.com/gotofritz/audio-playground)
+- **SAM-Audio Repo:** [facebookresearch/sam-audio](https://github.com/facebookresearch/sam-audio)
