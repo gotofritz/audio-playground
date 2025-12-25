@@ -17,9 +17,10 @@ def test_run(
     try:
         app_context: AppContext = ctx.obj
         logger = app_context.logger
-
         logger.info("Starting...")
-        # Initialize
+
+        # up to here it's my usual CLI set up.
+        # Now starts the SAM-audio specific code
         device = (
             torch.accelerator.current_accelerator().type
             if torch.accelerator.is_available()
@@ -28,30 +29,53 @@ def test_run(
         logger.info(f"Using {device} device")
 
         model = (
-            SAMAudio.from_pretrained("facebook/sam-audio-large", map_location=device)
+            SAMAudio.from_pretrained(
+                "facebook/sam-audio-large",
+                map_location=device,
+            )
             .to(device)
             .eval()
         )
-
-        processor = SAMAudioProcessor.from_pretrained("facebook/sam-audio-large")
+        processor = SAMAudioProcessor.from_pretrained(
+            "facebook/sam-audio-large",
+        )
 
         # Load and process
-        audio_path = "/Users/fritz/.yarkie/videos/r/rZp956sEDHY.mp4"
-        description = "Extract Bass"
+        audio_path = "/Users/fritz/work/sam-audio-playground/wav/"
+        source_path = audio_path + "sources/"
+        dest_path = audio_path + "processed/"
+
+        bass_source = source_path + "slap-bass.wav"
+        bass_description = "The bass track"
+        bass_dest = dest_path + "slap-"
+
+        voice_source = source_path + "voice-over-clapping.wav"
+        voice_description = "A man talking"
+        voice_dest = dest_path + "voice-"
 
         with torch.inference_mode():
-            inputs = processor(audios=[audio_path], descriptions=[description]).to(device)
+            inputs = processor(
+                audios=[bass_source, voice_source],
+                descriptions=[bass_description, voice_description],
+            ).to(device)
 
-            # Separate
-            result = model.separate(inputs)
-            # result = model.separate(inputs, predict_spans=True, reranking_candidates=8)
+            result = model.separate(
+                inputs,
+                predict_spans=False,
+                reranking_candidates=8,
+            )
 
-            # Save
             sr = processor.audio_sampling_rate
+
             target = result.target[0].unsqueeze(0).cpu()
-            torchaudio.save("bass.wav", target, sr)
+            torchaudio.save(bass_dest + "target.wav", target, sr)
             residual = result.residual[0].unsqueeze(0).cpu()
-            torchaudio.save("background.wav", residual, sr)
+            torchaudio.save(bass_dest + "residual.wav", residual, sr)
+
+            target = result.target[1].unsqueeze(0).cpu()
+            torchaudio.save(voice_dest + "target.wav", target, sr)
+            residual = result.residual[1].unsqueeze(0).cpu()
+            torchaudio.save(voice_dest + "residual.wav", residual, sr)
 
         logger.info("Done")
 

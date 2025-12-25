@@ -67,4 +67,5 @@ __pycache__/
 build
 **/*.egg-info
 
+.checkpoints
 

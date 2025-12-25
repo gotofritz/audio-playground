@@ -17,8 +17,8 @@ dependencies = [
   "click>=8.1.7",
   "rich>=14",
   "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
-  "torch==2.5.1",
-  "torchaudio==2.5.1",
+  "torch",
+  "torchaudio",
 ]
 
 [project.urls]
