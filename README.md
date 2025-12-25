@@ -47,8 +47,8 @@ cd audio-playground
 conda create -n sam-audio python=3.12 -y
 conda activate sam-audio
 
-# Optional: make pip work smoothly inside conda
-conda env config vars set PIP_REQUIRE_VIRTUALENV=false
+# install the env variables
+./setup_conda_env_variables.sh
 conda activate sam-audio
 ```
 
