@@ -49,8 +49,6 @@ dev = [
     "safety>=3.2.9,<4",
 ]
 
-[tool.uv]
-required-version = ">=0.8.4"
 [tool.commitizen]  # https://commitizen-tools.github.io/commitizen/config/
 bump_message = "bump(release): v$current_version → v$new_version"
 tag_format = "v$version"
@@ -58,7 +56,7 @@ update_changelog_on_bump = true
 version_provider = "pep621"
 
 [tool.mypy]  # https://mypy.readthedocs.io/en/latest/config_file.html
-exclude = []
+exclude = ["build/"]
 strict = true
 disallow_subclassing_any = false
 disallow_untyped_decorators = false

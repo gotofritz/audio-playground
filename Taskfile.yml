@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   ALL: . tests/
-  VENV: .venv/bin
+  VENV: $CONDA_PREFIX/bin
   SOURCES: ./
 
 tasks:

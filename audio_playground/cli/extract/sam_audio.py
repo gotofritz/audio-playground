@@ -4,9 +4,11 @@ import shutil
 import subprocess
 import uuid
 from pathlib import Path
+from typing import cast
 
 import click
 import numpy as np
+from torch import Tensor
 
 from audio_playground.app_context import AppContext
 from audio_playground.config.app_config import AudioPlaygroundConfig, Model
@@ -29,7 +31,7 @@ def create_segments(
     return segments
 
 
-def concatenate_segments(segment_files: list[str | Path]) -> "torch.Tensor":
+def concatenate_segments(segment_files: list[Path]) -> Tensor:
     """
     Simple concatenation of audio segments.
 
@@ -47,13 +49,15 @@ def concatenate_segments(segment_files: list[str | Path]) -> "torch.Tensor":
 
     if len(segment_files) == 1:
         audio, _ = torchaudio.load(segment_files[0])
-        return audio.float()
+        # casting purely for mypy; there is nothing wrong with just
+        # returning audio.float()
+        return cast(Tensor, audio.float())
 
     # Load all segments
-    all_audio: list[np.ndarray] = []
+    all_audio: list[Tensor] = []
     for seg_file in segment_files:
         audio, _ = torchaudio.load(seg_file)
-        all_audio.append(audio.squeeze(0).numpy())
+        all_audio.append(cast(Tensor, audio.squeeze(0)))
 
     # Simple concatenation
     concatenated = np.concatenate(all_audio)
@@ -85,6 +89,9 @@ def phase_1_segment_and_process(
         raise ValueError("No source file specified")
     if src:
         src_path = Path(src)
+
+    # mypy couldn't work this out by itself
+    assert src_path is not None
 
     # Generate unique temp directory for this run
     run_id = str(uuid.uuid4())
@@ -169,14 +176,13 @@ def phase_1_segment_and_process(
     logger.info(f"Saved segment metadata to {metadata_file}")
 
     # Setup model
+    accelerator = (
+        torch.accelerator.current_accelerator() if torch.accelerator.is_available() else None
+    )
     device = (
         config.device
         if config.device != "auto"
-        else (
-            torch.accelerator.current_accelerator().type
-            if torch.accelerator.is_available()
-            else "cpu"
-        )
+        else (accelerator.type if accelerator is not None else "cpu")
     )
     logger.info(f"Using {device} device")
 
