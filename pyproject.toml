@@ -17,6 +17,7 @@ dependencies = [
   "click>=8.1.7",
   "rich>=14",
   "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
+  "pydub",
   "torch",
   "torchaudio",
 ]
