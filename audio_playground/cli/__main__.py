@@ -17,9 +17,6 @@ from rich.console import Console
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.extract import extract
-from audio_playground.cli.test_run import test_run
-from audio_playground.cli.test_run2 import test_run2
-from audio_playground.cli.test_run3 import test_run3
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], default_map={"obj": {}})
 
@@ -42,9 +39,6 @@ def cli(ctx: click.Context) -> None:
 
 
 cli.add_command(extract)
-cli.add_command(test_run)
-cli.add_command(test_run2)
-cli.add_command(test_run3)
 
 
 if __name__ == "__main__":
