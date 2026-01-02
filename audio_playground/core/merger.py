@@ -1,6 +1,6 @@
 """Audio segment merging utilities."""
 
-import logging
+from logging import Logger
 from pathlib import Path
 from typing import cast
 
@@ -75,6 +75,7 @@ def find_prompts_from_files(tmp_dir: Path) -> dict[str, list[Path]]:
 def merge_and_save(
     tmp_dir: Path,
     output_dir: Path,
+    logger: Logger,
     chain_residuals: bool = True,
 ) -> None:
     """
@@ -83,6 +84,7 @@ def merge_and_save(
     Args:
         tmp_dir: Temporary directory containing segment files
         output_dir: Output directory for final merged files
+        logger: Logger instance from app_context
         chain_residuals: Whether to save cumulative residual as sam-other.wav
 
     Note:
@@ -91,8 +93,6 @@ def merge_and_save(
         for the cumulative residual.
     """
     import torchaudio
-
-    logger = logging.getLogger(__name__)
 
     output_dir.mkdir(parents=True, exist_ok=True)
 
