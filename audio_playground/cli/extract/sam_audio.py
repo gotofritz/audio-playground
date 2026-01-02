@@ -6,7 +6,7 @@ import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.config.app_config import AudioPlaygroundConfig, Model
-from audio_playground.core import Segmenter, WavConverter
+from audio_playground.core import segmenter, wav_converter
 
 
 def phase_1_segment_and_process(
@@ -50,14 +50,14 @@ def phase_1_segment_and_process(
     # Convert to WAV if needed
     wav_file = tmp_path / "audio.wav"
     logger.info(f"Converting {src_path} to WAV...")
-    WavConverter.convert_to_wav(src_path, wav_file)
+    wav_converter.convert_to_wav(src_path, wav_file)
 
     # Load audio duration and create variable-length segments
-    total_length = WavConverter.load_audio_duration(wav_file)
+    total_length = wav_converter.load_audio_duration(wav_file)
     logger.info(f"Total audio length: {total_length:.2f} seconds")
 
     # Create segments with variable lengths (9-17s) using min/max
-    segment_lengths: list[float] = Segmenter.create_segments(
+    segment_lengths: list[float] = segmenter.create_segments(
         total_length,
         min_length=config.min_segment_length,
         max_length=config.max_segment_length,
@@ -67,7 +67,7 @@ def phase_1_segment_and_process(
     )
 
     # Split audio into segment files
-    segment_files, segment_metadata = Segmenter.split_to_files(
+    segment_files, segment_metadata = segmenter.split_to_files(
         wav_file, tmp_path, segment_lengths
     )
     logger.info(f"Created {len(segment_files)} segments")
@@ -214,16 +214,16 @@ def phase_2_blend_and_save(
     Phase 2: Blend segments and save final output files.
     Runs regardless of whether we're continuing or not.
 
-    This phase uses Merger class which lazily imports torchaudio.
+    This phase uses merger module which lazily imports torchaudio.
     """
-    from audio_playground.core import Merger
+    from audio_playground.core import merger
 
     logger.info("=== PHASE 2: Concatenation and Final Output ===")
 
     target_path = Path(target).expanduser() if target else config.target_dir
 
-    # Use Merger to handle all merging logic
-    Merger.merge_and_save(tmp_path, target_path, config.chain_residuals)
+    # Use merger to handle all merging logic
+    merger.merge_and_save(tmp_path, target_path, config.chain_residuals)
 
 
 @click.command(name="test-run3")
