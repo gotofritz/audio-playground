@@ -9,6 +9,32 @@ from audio_playground.config.app_config import AudioPlaygroundConfig, Model
 from audio_playground.core import segmenter, wav_converter
 
 
+def batch_items(items: list[str], batch_size: int) -> list[list[str]]:
+    """
+    Split a list of items into batches of specified size.
+
+    Args:
+        items: List of items to batch
+        batch_size: Maximum size of each batch (must be >= 1)
+
+    Returns:
+        List of batches, where each batch is a list of items
+
+    Example:
+        >>> batch_items(["a", "b", "c", "d"], 2)
+        [["a", "b"], ["c", "d"]]
+        >>> batch_items(["a", "b", "c"], 2)
+        [["a", "b"], ["c"]]
+    """
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
+
+    batches: list[list[str]] = []
+    for i in range(0, len(items), batch_size):
+        batches.append(items[i : i + batch_size])
+    return batches
+
+
 def phase_1_segment_and_process(
     config: AudioPlaygroundConfig,
     logger: logging.Logger,
@@ -115,15 +141,22 @@ def phase_1_segment_and_process(
             ] = {}  # Store residuals for each prompt from original audio
 
             # Step 1: Run all prompts on the original audio to get clean targets
-            for prompt_idx, prompt in enumerate(prompts_list):
-                safe_prompt = prompt.replace(" ", "_").replace("/", "_")
+            # Process prompts in batches for efficiency
+            prompt_batches = batch_items(prompts_list, config.batch_prompts)
+            logger.debug(
+                f"Processing {len(prompts_list)} prompts in {len(prompt_batches)} batch(es) "
+                f"(batch_size={config.batch_prompts})"
+            )
+
+            for batch_idx, prompt_batch in enumerate(prompt_batches):
                 logger.debug(
-                    f"Processing prompt {prompt_idx + 1}/{len(prompts_list)} on original: {prompt}"
+                    f"Processing batch {batch_idx + 1}/{len(prompt_batches)}: {prompt_batch}"
                 )
 
+                # Process all prompts in this batch together
                 inputs = processor(
                     audios=[audio_path.as_posix()],
-                    descriptions=[prompt],
+                    descriptions=prompt_batch,  # Multiple prompts
                 ).to(device)
 
                 result = model.separate(
@@ -134,20 +167,26 @@ def phase_1_segment_and_process(
 
                 sr = processor.audio_sampling_rate
 
-                # Save target for this prompt
-                target_out = tmp_path / f"{audio_path.stem}-target-{safe_prompt}.wav"
-                target_audio = result.target[0].unsqueeze(0).cpu()
-                torchaudio.save(target_out.as_posix(), target_audio, sr)
-                target_files_by_prompt[prompt].append(target_out)
+                # Extract and save individual results for each prompt in the batch
+                for prompt_idx_in_batch, prompt in enumerate(prompt_batch):
+                    safe_prompt = prompt.replace(" ", "_").replace("/", "_")
 
-                # Save residual for this prompt (from original)
-                residual_out = tmp_path / f"{audio_path.stem}-residual-{safe_prompt}.wav"
-                residual_tensor = result.residual[0]
-                torchaudio.save(residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr)
-                residual_files_by_prompt[prompt].append(residual_out)
+                    # Save target for this prompt
+                    target_out = tmp_path / f"{audio_path.stem}-target-{safe_prompt}.wav"
+                    target_audio = result.target[prompt_idx_in_batch].unsqueeze(0).cpu()
+                    torchaudio.save(target_out.as_posix(), target_audio, sr)
+                    target_files_by_prompt[prompt].append(target_out)
 
-                # Store residual tensor for chaining (only keep, don't process yet)
-                segment_residuals[prompt] = residual_tensor
+                    # Save residual for this prompt (from original)
+                    residual_out = tmp_path / f"{audio_path.stem}-residual-{safe_prompt}.wav"
+                    residual_tensor = result.residual[prompt_idx_in_batch]
+                    torchaudio.save(
+                        residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr
+                    )
+                    residual_files_by_prompt[prompt].append(residual_out)
+
+                    # Store residual tensor for chaining (only keep, don't process yet)
+                    segment_residuals[prompt] = residual_tensor
 
             # Step 2: Chain subsequent prompts on residuals to build cumulative residual
             # Only run if chain_residuals is enabled and there are multiple prompts
