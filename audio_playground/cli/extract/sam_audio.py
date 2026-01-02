@@ -1,4 +1,5 @@
 import logging
+import traceback
 import uuid
 from pathlib import Path
 
@@ -341,5 +342,7 @@ def sam_audio(
         logger.info("All done")
 
     except Exception as e:
-        click.echo(f"CLI Error: {str(e)}")
+        logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}")
         ctx.exit(1)
