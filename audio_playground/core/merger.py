@@ -108,9 +108,7 @@ def merge_and_save(
             [
                 f
                 for f in tmp_dir.glob("segment-*.wav")
-                if "-target" not in f.name
-                and "-residual" not in f.name
-                and "-temp" not in f.name
+                if "-target" not in f.name and "-residual" not in f.name and "-temp" not in f.name
             ]
         )
         if not segment_files:
@@ -118,9 +116,7 @@ def merge_and_save(
 
         audio, sr_int = torchaudio.load(segment_files[0])
         sr = int(sr_int)
-        logger.warning(
-            f"No target files found yet, using original segment sample rate: {sr}"
-        )
+        logger.warning(f"No target files found yet, using original segment sample rate: {sr}")
 
     # Find all prompts from target files
     prompts = find_prompts_from_files(tmp_dir)

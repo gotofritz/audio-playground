@@ -93,9 +93,7 @@ def phase_1_segment_and_process(
     )
 
     # Split audio into segment files
-    segment_files, segment_metadata = segmenter.split_to_files(
-        wav_file, tmp_path, segment_lengths
-    )
+    segment_files, segment_metadata = segmenter.split_to_files(wav_file, tmp_path, segment_lengths)
     logger.info(f"Created {len(segment_files)} segments")
 
     for i, (start_time_s, actual_duration_s) in enumerate(segment_metadata):
@@ -180,9 +178,7 @@ def phase_1_segment_and_process(
                     # Save residual for this prompt (from original)
                     residual_out = tmp_path / f"{audio_path.stem}-residual-{safe_prompt}.wav"
                     residual_tensor = result.residual[prompt_idx_in_batch]
-                    torchaudio.save(
-                        residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr
-                    )
+                    torchaudio.save(residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr)
                     residual_files_by_prompt[prompt].append(residual_out)
 
                     # Store residual tensor for chaining (only keep, don't process yet)
@@ -294,7 +290,7 @@ def phase_2_blend_and_save(
 )
 @click.option(
     "--chain-residuals/--no-chain-residuals",
-    default=True,
+    default=False,
     help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used.",
 )
 @click.pass_context
