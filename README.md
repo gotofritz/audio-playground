@@ -143,10 +143,13 @@ task test
 # Linting and Type checking
 task qa
 
-# Set environment to offline mode (for HuggingFace)
-conda env config vars set HF_DATASETS_OFFLINE=1
-conda env config vars set TRANSFORMERS_OFFLINE=1
+# Set environment vars
+./setup_conda_env_variables.sh
+conda deactivate
+conda activate sam-audio
 
+# refresh the CLI tool
+pip install --no-deps --no-cache-dir .
 ```
 
 ## 🧪 Testing

@@ -28,6 +28,7 @@ export DYLD_FALLBACK_LIBRARY_PATH="\$CONDA_PREFIX/lib:\$DYLD_FALLBACK_LIBRARY_PA
 export HF_DATASETS_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PIP_REQUIRE_VIRTUALENV=false
+export TOKENIZERS_PARALLELISM=false
 
 echo "✓ sam-audio environment variables set."
 EOF
@@ -46,6 +47,7 @@ unset _OLD_DYLD_FALLBACK_LIBRARY_PATH
 unset HF_DATASETS_OFFLINE
 unset TRANSFORMERS_OFFLINE
 unset PIP_REQUIRE_VIRTUALENV
+unset TOKENIZERS_PARALLELISM
 
 echo "✓ sam-audio environment variables cleared."
 EOF
