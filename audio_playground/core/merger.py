@@ -1,13 +1,14 @@
 """Audio segment merging utilities."""
 
+import logging
 from pathlib import Path
-from typing import TYPE_CHECKING, cast
+from typing import cast
 
-if TYPE_CHECKING:
-    from torch import Tensor
+import numpy as np
+from torch import Tensor
 
 
-def concatenate_segments(segment_files: list[Path]) -> "Tensor":
+def concatenate_segments(segment_files: list[Path]) -> Tensor:
     """
     Load and concatenate audio segments.
 
@@ -18,7 +19,7 @@ def concatenate_segments(segment_files: list[Path]) -> "Tensor":
         Concatenated audio tensor (channels, samples)
 
     Note:
-        Uses lazy imports to avoid loading torch/torchaudio at module level.
+        torch and torchaudio are imported lazily inside this function.
     """
     import torch
     import torchaudio
@@ -30,17 +31,15 @@ def concatenate_segments(segment_files: list[Path]) -> "Tensor":
         audio, _ = torchaudio.load(segment_files[0])
         # casting purely for mypy; there is nothing wrong with just
         # returning audio.float()
-        return cast("Tensor", audio.float())
+        return cast(Tensor, audio.float())
 
     # Load all segments
-    all_audio: list["Tensor"] = []
+    all_audio: list[Tensor] = []
     for seg_file in segment_files:
         audio, _ = torchaudio.load(seg_file)
-        all_audio.append(cast("Tensor", audio.squeeze(0)))
+        all_audio.append(cast(Tensor, audio.squeeze(0)))
 
     # Simple concatenation
-    import numpy as np
-
     concatenated = np.concatenate(all_audio)
 
     return torch.from_numpy(concatenated).unsqueeze(0).float()
@@ -87,12 +86,10 @@ def merge_and_save(
         chain_residuals: Whether to save cumulative residual as sam-other.wav
 
     Note:
-        Uses lazy imports to avoid loading torchaudio at module level.
+        torchaudio is imported lazily inside this function.
         Creates sam-{prompt}.wav for each prompt and optionally sam-other.wav
         for the cumulative residual.
     """
-    import logging
-
     import torchaudio
 
     logger = logging.getLogger(__name__)

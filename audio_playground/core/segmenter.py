@@ -3,6 +3,8 @@
 import json
 from pathlib import Path
 
+from pydub import AudioSegment
+
 
 def create_segments(
     total_length: float, min_length: float = 9.0, max_length: float = 17.0
@@ -55,11 +57,8 @@ def split_to_files(
             - segment_metadata: List of (start_time, duration) tuples in seconds
 
     Note:
-        Uses lazy imports to avoid loading pydub at module level.
-        Also saves metadata to a JSON file in the output directory.
+        Saves metadata to a JSON file in the output directory.
     """
-    from pydub import AudioSegment
-
     # Load audio
     audio = AudioSegment.from_file(audio_path.as_posix())
 

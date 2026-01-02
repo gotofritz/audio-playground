@@ -1,6 +1,11 @@
 """Audio format conversion utilities."""
 
+import shutil
+import subprocess
 from pathlib import Path
+from typing import cast
+
+from pydub import AudioSegment
 
 
 def convert_to_wav(src_path: Path, dst_path: Path) -> None:
@@ -10,13 +15,7 @@ def convert_to_wav(src_path: Path, dst_path: Path) -> None:
     Args:
         src_path: Source audio file path
         dst_path: Destination WAV file path
-
-    Note:
-        Uses lazy imports to avoid loading heavy dependencies at module level.
     """
-    import shutil
-    import subprocess
-
     # For MP4 files, use ffmpeg
     if src_path.suffix.lower() == ".mp4":
         subprocess.run(
@@ -37,8 +36,6 @@ def convert_to_wav(src_path: Path, dst_path: Path) -> None:
         shutil.copy(src_path, dst_path)
     else:
         # For other formats, use pydub
-        from pydub import AudioSegment
-
         audio = AudioSegment.from_file(src_path)
         audio.export(dst_path.as_posix(), format="wav")
 
@@ -52,13 +49,6 @@ def load_audio_duration(path: Path) -> float:
 
     Returns:
         Duration in seconds
-
-    Note:
-        Uses lazy imports to avoid loading pydub at module level.
     """
-    from typing import cast
-
-    from pydub import AudioSegment
-
     audio = AudioSegment.from_file(path.as_posix())
     return cast(float, audio.duration_seconds)
