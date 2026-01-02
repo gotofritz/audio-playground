@@ -153,9 +153,11 @@ def phase_1_segment_and_process(
                 )
 
                 # Process all prompts in this batch together
+                # SAM-Audio processor requires len(audios) == len(descriptions)
+                # So we duplicate the audio path for each prompt in the batch
                 inputs = processor(
-                    audios=[audio_path.as_posix()],
-                    descriptions=prompt_batch,  # Multiple prompts
+                    audios=[audio_path.as_posix()] * len(prompt_batch),
+                    descriptions=prompt_batch,
                 ).to(device)
 
                 result = model.separate(
