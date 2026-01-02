@@ -34,6 +34,9 @@ def setup_logger(
     normalised_log_level = getattr(logging, log_level.upper()) or logging.INFO
     logger.setLevel(normalised_log_level)
 
+    # Prevent duplicate messages by not propagating to root logger
+    logger.propagate = False
+
     console_handler = logging.StreamHandler(sys.stdout)
     formatter = logging.Formatter("%(asctime)s [%(levelname)8.8s] %(message)s")
     console_handler.setFormatter(formatter)
