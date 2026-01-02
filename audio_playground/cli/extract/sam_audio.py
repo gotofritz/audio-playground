@@ -248,7 +248,8 @@ def phase_1_segment_and_process(
                 segment_residuals[prompt] = residual_tensor
 
             # Step 2: Chain subsequent prompts on residuals to build cumulative residual
-            if len(prompts_list) > 1:
+            # Only run if chain_residuals is enabled and there are multiple prompts
+            if config.chain_residuals and len(prompts_list) > 1:
                 current_residual_tensor = segment_residuals[
                     prompts_list[0]
                 ]  # Start with residual of first prompt
@@ -292,6 +293,9 @@ def phase_1_segment_and_process(
                     current_residual_tensor.unsqueeze(0).cpu(),
                     sr,
                 )
+            else:
+                if not config.chain_residuals and len(prompts_list) > 1:
+                    logger.debug("Residual chaining disabled (--no-chain-residuals)")
 
             logger.info("...done")
 
@@ -364,17 +368,22 @@ def phase_2_blend_and_save(
         torchaudio.save(output.as_posix(), concatenated_target, sr)
         logger.info(f"Saved {output}")
 
-    # Concatenate and save cumulative residual as sam-other.wav
-    cumulative_files: list[Path] = sorted(tmp_path.glob("segment-*-residual-cumulative-final.wav"))
-    if cumulative_files:
-        logger.info("Concatenating cumulative residual files...")
+    # Concatenate and save cumulative residual as sam-other.wav (only if chaining was enabled)
+    if config.chain_residuals:
+        cumulative_files: list[Path] = sorted(
+            tmp_path.glob("segment-*-residual-cumulative-final.wav")
+        )
+        if cumulative_files:
+            logger.info("Concatenating cumulative residual files...")
 
-        concatenated_cumulative = concatenate_segments(cumulative_files)
-        output = target_path / "sam-other.wav"
-        torchaudio.save(output.as_posix(), concatenated_cumulative, sr)
-        logger.info(f"Saved {output}")
+            concatenated_cumulative = concatenate_segments(cumulative_files)
+            output = target_path / "sam-other.wav"
+            torchaudio.save(output.as_posix(), concatenated_cumulative, sr)
+            logger.info(f"Saved {output}")
+        else:
+            logger.warning("No cumulative residual files found")
     else:
-        logger.warning("No cumulative residual files found")
+        logger.debug("Skipping cumulative residual output (--no-chain-residuals)")
 
 
 @click.command(name="test-run3")
@@ -404,6 +413,11 @@ def phase_2_blend_and_save(
     type=click.Choice(Model, case_sensitive=False),
     help="What model to use. Use -h to view list",
 )
+@click.option(
+    "--chain-residuals/--no-chain-residuals",
+    default=True,
+    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used.",
+)
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
@@ -412,6 +426,7 @@ def sam_audio(
     prompts: tuple[str, ...],
     continue_from: str | None,
     model: Model = Model.LARGE,
+    chain_residuals: bool = False,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -427,6 +442,7 @@ def sam_audio(
         logger.info("Starting...")
         logger.info(f"Target: {target or config.target_dir}")
         logger.info(f"Prompts: {list(prompts) if prompts else config.prompts}")
+        logger.info(f"Chain residuals: {chain_residuals}")
 
         # Override config with CLI arguments if provided
         if src:
@@ -435,6 +451,7 @@ def sam_audio(
             config.target_dir = Path(target).expanduser()
         if prompts:
             config.prompts = list(prompts)
+        config.chain_residuals = chain_residuals
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:

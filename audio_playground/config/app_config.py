@@ -39,6 +39,11 @@ class AudioPlaygroundConfig(BaseSettings):
         default=2, description="Number of prompts to process in batch (1=sequential, 2+=batch)"
     )
 
+    chain_residuals: bool = Field(
+        default=False,
+        description="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts are used",
+    )
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         env_file=".env",
