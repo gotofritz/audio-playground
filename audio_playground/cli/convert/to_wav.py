@@ -34,7 +34,8 @@ def to_wav(
     """
     logger = app_context.logger
 
-    logger.info(f"Converting {src} to WAV format...")
+    click.echo(f"Converting {src} to WAV format...")
+    logger.info(f"Converting {src} to WAV format")
 
     # Ensure target directory exists
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -42,4 +43,5 @@ def to_wav(
     # Convert the file
     convert_to_wav_fn(src, target)
 
-    logger.info(f"Conversion complete. Output saved to {target}")
+    click.echo(f"Conversion complete. Output saved to {target}")
+    logger.info(f"Conversion complete: {target}")
