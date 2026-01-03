@@ -7,7 +7,10 @@ from pydub import AudioSegment
 
 
 def create_segments(
-    total_length: float, min_length: float = 9.0, max_length: float = 17.0
+    total_length: float,
+    min_length: float = 9.0,
+    max_length: float = 17.0,
+    max_segments: int | None = None,
 ) -> list[float]:
     """
     Create even-length segments from total duration.
@@ -16,6 +19,7 @@ def create_segments(
         total_length: Total audio duration in seconds
         min_length: Minimum segment length in seconds
         max_length: Maximum segment length in seconds
+        max_segments: Maximum number of segments to create (None = no limit)
 
     Returns:
         List of segment lengths in seconds that sum to total_length
@@ -23,10 +27,15 @@ def create_segments(
     Note:
         Segments are created to be as even as possible, with target length
         at the midpoint of min and max. The last segment gets the remainder
-        to ensure exact total.
+        to ensure exact total. If max_segments is specified, it caps the
+        number of segments (useful for testing).
     """
     target_length = (min_length + max_length) / 2
     num_segments = max(1, round(total_length / target_length))
+
+    # Cap number of segments if specified
+    if max_segments is not None and max_segments > 0:
+        num_segments = min(num_segments, max_segments)
 
     # Create equal segments
     segment_length = total_length / num_segments

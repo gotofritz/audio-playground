@@ -88,7 +88,10 @@ def phase_1_segment_and_process(
         total_length,
         min_length=config.min_segment_length,
         max_length=config.max_segment_length,
+        max_segments=config.max_segments,
     )
+    if config.max_segments:
+        logger.info(f"Limiting to max {config.max_segments} segments for testing")
     logger.info(
         f"Creating {len(segment_lengths)} segments: {[round(s, 2) for s in segment_lengths]}"
     )
@@ -303,6 +306,11 @@ def phase_2_blend_and_save(
     type=int,
     help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
 )
+@click.option(
+    "--max-segments",
+    type=int,
+    help="Maximum number of segments to create (useful for testing). If not specified, uses calculated number.",
+)
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
@@ -313,6 +321,7 @@ def sam_audio(
     model: Model = Model.LARGE,
     chain_residuals: bool = False,
     sample_rate: int | None = None,
+    max_segments: int | None = None,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -331,6 +340,8 @@ def sam_audio(
         logger.info(f"Chain residuals: {chain_residuals}")
         if sample_rate:
             logger.info(f"Target sample rate: {sample_rate} Hz")
+        if max_segments:
+            logger.info(f"Max segments: {max_segments}")
 
         # Override config with CLI arguments if provided
         if src:
@@ -342,6 +353,8 @@ def sam_audio(
         config.chain_residuals = chain_residuals
         if sample_rate is not None:
             config.sample_rate = sample_rate
+        if max_segments is not None:
+            config.max_segments = max_segments
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:

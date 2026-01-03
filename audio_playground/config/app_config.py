@@ -26,6 +26,10 @@ class AudioPlaygroundConfig(BaseSettings):
     # Segment configuration
     min_segment_length: float = 9.0
     max_segment_length: float = 17.0
+    max_segments: int | None = Field(
+        default=None,
+        description="Maximum number of segments to create (None = no limit). Useful for testing.",
+    )
 
     # Model configuration
     model_item: Model = Model.SMALL
