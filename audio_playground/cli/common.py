@@ -1,12 +1,14 @@
 """Common CLI decorators and options shared across commands."""
 
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable, TypeVar
 
 import click
 
+F = TypeVar("F", bound=Callable[..., Any])
 
-def src_option(required: bool = True, help_text: str = "Source audio file") -> Callable:
+
+def src_option(required: bool = True, help_text: str = "Source audio file") -> Callable[[F], F]:
     """
     Decorator for --src option.
 
@@ -25,7 +27,9 @@ def src_option(required: bool = True, help_text: str = "Source audio file") -> C
     )
 
 
-def target_option(required: bool = True, help_text: str = "Target output file path") -> Callable:
+def target_option(
+    required: bool = True, help_text: str = "Target output file path"
+) -> Callable[[F], F]:
     """
     Decorator for --target option.
 
@@ -46,7 +50,7 @@ def target_option(required: bool = True, help_text: str = "Target output file pa
 
 def output_dir_option(
     required: bool = True, help_text: str = "Output directory for results"
-) -> Callable:
+) -> Callable[[F], F]:
     """
     Decorator for --output-dir option.
 
@@ -67,7 +71,7 @@ def output_dir_option(
 
 def input_dir_option(
     required: bool = True, help_text: str = "Input directory containing files"
-) -> Callable:
+) -> Callable[[F], F]:
     """
     Decorator for --input-dir option.
 
