@@ -1,5 +1,7 @@
 # 🚀 audio-playground
 
+![Coverage](https://raw.githubusercontent.com/gotofritz/audio-playground/badges/coverage.svg)
+
 Playing with sam-audio
 
 ## 📋 Overview
@@ -7,20 +9,6 @@ Playing with sam-audio
 `audio-playground` is a research environment for experimenting with Meta's SAM-Audio model. Due to specific hardware and compiler requirements on M1/M2/M3 Macs, this project uses **Conda** to manage C++ dependencies (FFmpeg) and **PyTorch Nightly** builds to ensure compatibility.
 
 The best way of running this is is as a subfolder of a conda project, as described [in this blog post](https://gotofritz.net/blog/2025-12-20-playing-with-the-sam-audio-model-on-my-m1-macbook/)
-
-## 🎁 Features
-
-- 🐍 **Conda-powered environment** for robust binary and C++ dependency management
-- 🔊 **SAM-Audio Integration** for advanced audio separation and generation
-- 🍎 **macOS Optimized** setup using PyTorch Nightly and TorchCodec binaries
-- ⚡️ **Streamlined task execution** with [Task](https://taskfile.dev/)
-- ✍️ **Code formatting and linting** with [Ruff](https://github.com/charliermarsh/ruff)
-- 🔍 **Type checking** with [Mypy](https://github.com/python/mypy)
-- 🛡️ **Quality gates** with [Pre-commit](https://pre-commit.com/) hooks
-- 🏷️ **Automated versioning** following [Conventional Commits](https://www.conventionalcommits.org/) with [Commitizen](https://github.com/commitizen-tools/commitizen)
-- 📋 **Changelog generation** compatible with [Keep A Changelog](https://keepachangelog.com/)
-- 🔄 **Continuous integration** with [GitHub Actions](https://docs.github.com/en/actions)
-- ✅ **Comprehensive testing** with pytest and coverage reporting
 
 ## 🚀 Quick Start
 

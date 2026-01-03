@@ -16,6 +16,7 @@ import click
 from rich.console import Console
 
 from audio_playground.app_context import AppContext
+from audio_playground.cli.convert import convert
 from audio_playground.cli.doctor import doctor
 from audio_playground.cli.extract import extract
 
@@ -39,6 +40,7 @@ def cli(ctx: click.Context) -> None:
     ctx.ensure_object(AppContext)
 
 
+cli.add_command(convert)
 cli.add_command(doctor)
 cli.add_command(extract)
 
