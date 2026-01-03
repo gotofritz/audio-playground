@@ -37,8 +37,8 @@ jobs:
           # Install other dependencies
           pip install pydub click rich pydantic pydantic-settings
 
-          # Install dev dependencies
-          pip install pytest pytest-cov mypy ruff
+          # Install all dev dependencies from pyproject.toml
+          pip install copier commitizen faker mypy polyfactory pre-commit pytest pytest-cov pytest-datadir pytest-env ruff safety
 
           # Install the package in editable mode (without sam-audio dependency for CI)
           pip install -e . --no-deps
