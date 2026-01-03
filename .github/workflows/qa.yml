@@ -1,0 +1,65 @@
+name: QA
+
+on:
+  push:
+    branches:
+      - main
+      - "claude/**"
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  qa:
+    name: Code Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Miniconda
+        uses: conda-incubator/setup-miniconda@v3
+        with:
+          auto-update-conda: true
+          python-version: "3.12"
+          miniconda-version: "latest"
+          activate-environment: sam-audio
+
+      - name: Install FFmpeg
+        shell: bash -el {0}
+        run: |
+          conda install -c conda-forge ffmpeg=7.1 -y
+
+      - name: Install Python dependencies
+        shell: bash -el {0}
+        run: |
+          # Install PyTorch CPU version for CI (faster, no CUDA needed)
+          pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+          # Install other dependencies
+          pip install pydub click rich pydantic pydantic-settings
+
+          # Install dev dependencies
+          pip install pytest pytest-cov mypy ruff
+
+          # Install the package in editable mode (without sam-audio dependency for CI)
+          pip install -e . --no-deps
+
+      - name: Install Task
+        shell: bash -el {0}
+        run: |
+          sh -c "$(curl --location https://taskfile.dev/install.sh)" -- -d -b /usr/local/bin
+
+      - name: Run QA checks
+        shell: bash -el {0}
+        run: |
+          task qa
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: tests/coverage/
+          retention-days: 7
