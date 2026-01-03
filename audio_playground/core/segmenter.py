@@ -64,7 +64,7 @@ def split_to_files(
 
     segment_files: list[Path] = []
     segment_metadata: list[tuple[float, float]] = []
-    current_time_ms = 0
+    current_time_ms = 0.0  # Keep as float to avoid rounding errors
 
     for i, seg_length in enumerate(segment_lengths):
         # Simple concatenation - segments end-to-end
@@ -83,7 +83,8 @@ def split_to_files(
 
         segment_metadata.append((start_time_s, actual_duration_s))
 
-        current_time_ms += int(seg_length * 1000)
+        # Increment as float to preserve precision
+        current_time_ms += seg_length * 1000
 
     # Save segment metadata
     metadata_file = output_dir / "segment_metadata.json"
