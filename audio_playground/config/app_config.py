@@ -24,8 +24,10 @@ class AudioPlaygroundConfig(BaseSettings):
     prompts: list[str] = ["bass"]
 
     # Segment configuration
-    min_segment_length: float = 9.0
-    max_segment_length: float = 17.0
+    segment_window_size: float = Field(
+        default=14.0,
+        description="Fixed segment length in seconds. All segments except the last will be this size.",
+    )
     max_segments: int | None = Field(
         default=None,
         description="Maximum number of segments to create (None = no limit). Useful for testing.",

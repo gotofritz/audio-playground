@@ -8,41 +8,43 @@ from pydub import AudioSegment
 
 def create_segments(
     total_length: float,
-    min_length: float = 9.0,
-    max_length: float = 17.0,
+    window_size: float = 14.0,
     max_segments: int | None = None,
 ) -> list[float]:
     """
-    Create even-length segments from total duration.
+    Create fixed-size segments from total duration.
 
     Args:
         total_length: Total audio duration in seconds
-        min_length: Minimum segment length in seconds
-        max_length: Maximum segment length in seconds
+        window_size: Fixed segment length in seconds (default: 14.0)
         max_segments: Maximum number of segments to create (None = no limit)
 
     Returns:
         List of segment lengths in seconds that sum to total_length
 
     Note:
-        Segments are created to be as even as possible, with target length
-        at the midpoint of min and max. The last segment gets the remainder
-        to ensure exact total. If max_segments is specified, it caps the
-        number of segments (useful for testing).
+        All segments except the last are exactly window_size seconds.
+        The last segment gets the remainder (may be shorter or longer).
+        If max_segments is specified, it caps the number of segments (useful for testing).
     """
-    target_length = (min_length + max_length) / 2
-    num_segments = max(1, round(total_length / target_length))
+    if total_length <= window_size:
+        # Audio is shorter than one window - single segment
+        return [total_length]
+
+    # Calculate how many full windows fit
+    num_segments = int(total_length / window_size)
 
     # Cap number of segments if specified
     if max_segments is not None and max_segments > 0:
         num_segments = min(num_segments, max_segments)
 
-    # Create equal segments
-    segment_length = total_length / num_segments
-    segments = [segment_length] * (num_segments - 1)
+    # Create fixed-size segments
+    segments = [window_size] * num_segments
 
-    # Last segment gets the remainder to ensure exact total
-    segments.append(total_length - sum(segments))
+    # Last segment gets the remainder
+    remainder = total_length - (num_segments * window_size)
+    if remainder > 0:
+        segments.append(remainder)
 
     return segments
 

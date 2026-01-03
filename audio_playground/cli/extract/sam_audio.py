@@ -79,21 +79,21 @@ def phase_1_segment_and_process(
     logger.info(f"Converting {src_path} to WAV...")
     wav_converter.convert_to_wav(src_path, wav_file)
 
-    # Load audio duration and create variable-length segments
+    # Load audio duration and create fixed-size segments
     total_length = wav_converter.load_audio_duration(wav_file)
     logger.info(f"Total audio length: {total_length:.2f} seconds")
 
-    # Create segments with variable lengths (9-17s) using min/max
+    # Create segments with fixed window size
     segment_lengths: list[float] = segmenter.create_segments(
         total_length,
-        min_length=config.min_segment_length,
-        max_length=config.max_segment_length,
+        window_size=config.segment_window_size,
         max_segments=config.max_segments,
     )
     if config.max_segments:
         logger.info(f"Limiting to max {config.max_segments} segments for testing")
     logger.info(
-        f"Creating {len(segment_lengths)} segments: {[round(s, 2) for s in segment_lengths]}"
+        f"Creating {len(segment_lengths)} segments ({config.segment_window_size}s window): "
+        f"{[round(s, 2) for s in segment_lengths]}"
     )
 
     # Split audio into segment files
