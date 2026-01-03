@@ -12,11 +12,11 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 1 Complete | Next: Phase 2
+**Current Phase:** Phase 2 In Progress | Step 2.1 Complete
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- ⏳ Phase 2: Not Started
+- 🚧 Phase 2: In Progress (Step 2.1 complete)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
@@ -239,19 +239,28 @@ Extract reusable components into a `core/` package with lazy imports for speed.
 
 ---
 
-## ⏳ Phase 2: Atomic CLI Commands
+## 🚧 Phase 2: Atomic CLI Commands
 
 ### Goal
 
-Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process`, `merge`.
+Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process-sam-audio`, `process-demucs`, `merge`.
+Support both SAM-Audio and Demucs models with model-specific processing commands.
 
-### Step 2.1: Create `convert` command
+### Step 2.1: Create `convert` command ✅
 
-- **File:** `audio_playground/cli/convert/__init__.py` + `to_wav.py`
+- **Status:** ✅ Complete
+- **Files:**
+  - `audio_playground/cli/convert/__init__.py` - convert command group
+  - `audio_playground/cli/convert/to_wav.py` - to-wav subcommand
+  - `audio_playground/cli/common.py` - common option decorators (src_option, target_option, etc.)
+  - `tests/cli/convert/test_to_wav.py` - unit tests
 - **Responsibility:** Convert any audio → WAV
 - **Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
-- **Implementation:** Wrap `WavConverter.convert_to_wav()`
-- **Test:** Verify output is valid WAV
+- **Implementation:**
+  - Wraps `convert_to_wav()` from `core/wav_converter.py`
+  - Uses `click.echo()` for user output (captured by tests)
+  - Uses common option decorators for consistency
+- **Tests:** ✅ All passing (help, missing args, success, group help)
 
 ### Step 2.2: Create `segment` command
 
@@ -270,48 +279,118 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 - **Implementation:** Wrap `Merger.concatenate_segments()`
 - **Test:** Verify output matches original (if only converting)
 
-### Step 2.4: Create `extract` → `process` command (renamed internally)
+### Step 2.4a: Create `extract process-sam-audio` command
 
-- **File:** `audio_playground/cli/extract/process.py` (new)
-- **Responsibility:** Run SAM-Audio on a single segment or set of segments
-- **Usage:** `audio-playground extract process --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
-- **Implementation:** Refactor existing model inference logic from Phase 1
-- **Test:** Verify produces `{segment}-target-{prompt}.wav` files
+- **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
+- **Responsibility:** Run SAM-Audio model on segment(s)
+- **Usage Examples:**
+  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
+  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out`
+  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out`
+- **Implementation:**
+  - `--segment` accepts multiple values (Click `multiple=True`)
+  - Expand glob patterns in segment paths
+  - Refactor existing model inference logic from Phase 1
+  - Batch process all segments with model loaded once
+- **Test:** Verify produces `{segment}-target-{prompt}.wav` files for each segment
 
-### Step 2.5: Make `extract sam-audio` a composite command
+### Step 2.4b: Create `extract process-demucs` command
+
+- **File:** `audio_playground/cli/extract/process_demucs.py` (new)
+- **Responsibility:** Run Demucs model on audio file
+- **Usage:** `audio-playground extract process-demucs --src audio.wav --output-dir ./out`
+- **Implementation:**
+  - Uses `--src` (single file, no segmentation needed)
+  - Integrates with Demucs library
+  - Outputs separated stems to output directory
+- **Test:** Verify produces separated audio stems
+
+### Step 2.5a: Make `extract sam-audio` a composite command
 
 - **File:** `audio_playground/cli/extract/sam_audio.py`
 - **Change:** Simplify to call the atomic commands in sequence:
   ```python
-  # Phase 1: Convert → Segment → Process (on all segments)
-  # Phase 2: Merge
+  # Workflow:
+  # 1. convert to-wav (src → wav)
+  # 2. segment split (wav → segments)
+  # 3. extract process-sam-audio (segments → processed segments)
+  # 4. merge concat (processed segments → final outputs)
   ```
-- **Benefit:** Users can now manually `convert` → `segment` → skip processing → `merge` if desired
+- **Benefit:** Users can now manually run individual steps if desired
 - **Test:** Output identical to current behavior
+
+### Step 2.5b: Create `extract demucs` composite command
+
+- **File:** `audio_playground/cli/extract/demucs.py` (new)
+- **Responsibility:** Full Demucs extraction pipeline
+- **Usage:** `audio-playground extract demucs --src input.mp4 --output-dir ./out`
+- **Change:** Call atomic commands in sequence:
+  ```python
+  # Workflow:
+  # 1. convert to-wav (src → wav)
+  # 2. extract process-demucs (wav → separated stems)
+  ```
+- **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
+- **Test:** Verify separated stems are produced
 
 ### Step 2.6: Add global config overrides to each command
 
-- **File:** `audio_playground/cli/base.py` (new)
-- **Responsibility:** Create a shared decorator/mixin for common options:
+- **File:** `audio_playground/cli/common.py` (partially complete)
+- **Status:** ⚠️ Partially complete (basic options done, global config options pending)
+- **Completed:**
+  - ✅ `src_option()` - for `--src` parameter
+  - ✅ `target_option()` - for `--target` parameter
+  - ✅ `output_dir_option()` - for `--output-dir` parameter
+  - ✅ `input_dir_option()` - for `--input-dir` parameter
+- **TODO:** Add global config decorators:
   ```python
   @click.option("--log-level", type=click.Choice([...]), help="...")
   @click.option("--device", default="auto", help="...")
   @click.option("--temp-dir", type=click.Path(), help="...")
-  def common_options(func):
-      """Decorator for shared CLI flags."""
+  def common_config_options(func):
+      """Decorator for shared config flags."""
   ```
 - **Usage:** Apply to all commands to avoid repetition
 - **Test:** Verify each command respects `--device`, `--log-level`, etc.
 
 ### Validation Checklist
 
-- [ ] `audio-playground convert --help` works
-- [ ] `audio-playground segment --help` works
-- [ ] `audio-playground merge --help` works
-- [ ] Running atomic commands in sequence produces same output as `extract sam-audio`
-- [ ] Each command saves manifest/metadata for potential caching later
+- [x] **Step 2.1:** `audio-playground convert to-wav --help` works
+- [x] **Step 2.1:** Convert command tests pass
+- [x] **Step 2.1:** Common option decorators created
+- [ ] **Step 2.2:** `audio-playground segment split --help` works
+- [ ] **Step 2.2:** Segment command produces valid output
+- [ ] **Step 2.3:** `audio-playground merge concat --help` works
+- [ ] **Step 2.3:** Merge command reconstructs audio correctly
+- [ ] **Step 2.4a:** `audio-playground extract process-sam-audio --help` works
+- [ ] **Step 2.4a:** Process command handles single/multiple/glob segments
+- [ ] **Step 2.4b:** `audio-playground extract process-demucs --help` works
+- [ ] **Step 2.4b:** Demucs integration produces separated stems
+- [ ] **Step 2.5a:** `extract sam-audio` composite produces same output as current implementation
+- [ ] **Step 2.5b:** `extract demucs` composite works end-to-end
+- [ ] **Step 2.6:** Global config options applied to all commands
 
-**Exit Criteria:** All atomic commands functional; `extract sam-audio` is composite
+**Exit Criteria:** All atomic commands functional; both composite commands work; common options standardized
+
+### Additional Improvements (Phase 2)
+
+**CI/CD Enhancements:**
+- ✅ GitHub Actions workflow for automated QA checks
+  - Runs `task qa` on all pushes and PRs
+  - Blocks PR merge if QA fails
+  - Installs all dependencies (conda, PyTorch, dev deps)
+- ✅ Coverage badge generation
+  - Auto-generated on main branch pushes
+  - Stored in `badges` branch
+  - Embeddable in README
+- ✅ Coverage artifact upload
+  - HTML coverage reports available for download
+  - 7-day retention
+  - Runs even on test failures
+
+**Files Added:**
+- `.github/workflows/qa.yml` - CI/CD workflow
+- `.github/COVERAGE_BADGE.md` - Badge usage documentation
 
 ---
 
