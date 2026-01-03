@@ -44,6 +44,11 @@ class AudioPlaygroundConfig(BaseSettings):
         description="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts are used",
     )
 
+    sample_rate: int | None = Field(
+        default=None,
+        description="Target sample rate in Hz for output files. If None, uses original sample rate.",
+    )
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         env_file=".env",

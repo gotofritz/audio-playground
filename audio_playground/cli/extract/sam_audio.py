@@ -261,7 +261,9 @@ def phase_2_blend_and_save(
     target_path = Path(target).expanduser() if target else config.target_dir
 
     # Use merger to handle all merging logic
-    merger.merge_and_save(tmp_path, target_path, logger, config.chain_residuals)
+    merger.merge_and_save(
+        tmp_path, target_path, logger, config.chain_residuals, config.sample_rate
+    )
 
 
 @click.command(name="test-run3")
@@ -296,6 +298,11 @@ def phase_2_blend_and_save(
     default=False,
     help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used.",
 )
+@click.option(
+    "--sample-rate",
+    type=int,
+    help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
+)
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
@@ -305,6 +312,7 @@ def sam_audio(
     continue_from: str | None,
     model: Model = Model.LARGE,
     chain_residuals: bool = False,
+    sample_rate: int | None = None,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -321,6 +329,8 @@ def sam_audio(
         logger.info(f"Target: {target or config.target_dir}")
         logger.info(f"Prompts: {list(prompts) if prompts else config.prompts}")
         logger.info(f"Chain residuals: {chain_residuals}")
+        if sample_rate:
+            logger.info(f"Target sample rate: {sample_rate} Hz")
 
         # Override config with CLI arguments if provided
         if src:
@@ -330,6 +340,8 @@ def sam_audio(
         if prompts:
             config.prompts = list(prompts)
         config.chain_residuals = chain_residuals
+        if sample_rate is not None:
+            config.sample_rate = sample_rate
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:

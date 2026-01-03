@@ -77,6 +77,7 @@ def merge_and_save(
     output_dir: Path,
     logger: Logger,
     chain_residuals: bool = True,
+    sample_rate: int | None = None,
 ) -> None:
     """
     Merge all segments and save outputs.
@@ -86,11 +87,13 @@ def merge_and_save(
         output_dir: Output directory for final merged files
         logger: Logger instance from app_context
         chain_residuals: Whether to save cumulative residual as sam-other.wav
+        sample_rate: Target sample rate in Hz. If None, uses original sample rate.
 
     Note:
         torchaudio is imported lazily inside this function.
         Creates sam-{prompt}.wav for each prompt and optionally sam-other.wav
         for the cumulative residual.
+        If sample_rate is provided, output files are resampled to that rate.
     """
     import torchaudio
 
@@ -121,14 +124,27 @@ def merge_and_save(
     # Find all prompts from target files
     prompts = find_prompts_from_files(tmp_dir)
 
+    # Determine output sample rate
+    output_sr = sample_rate if sample_rate is not None else sr
+    if sample_rate is not None and sample_rate != sr:
+        logger.info(f"Will resample output from {sr} Hz to {sample_rate} Hz")
+
     # Concatenate and save each prompt as sam-{prompt}.wav
     for prompt in sorted(prompts.keys()):
         logger.info(f"Concatenating target files for prompt: {prompt}")
         target_files: list[Path] = prompts[prompt]
 
         concatenated_target = concatenate_segments(target_files)
+
+        # Resample if needed
+        if sample_rate is not None and sample_rate != sr:
+            import torchaudio.transforms as T
+
+            resampler = T.Resample(orig_freq=sr, new_freq=sample_rate)
+            concatenated_target = resampler(concatenated_target)
+
         output = output_dir / f"sam-{prompt}.wav"
-        torchaudio.save(output.as_posix(), concatenated_target, sr)
+        torchaudio.save(output.as_posix(), concatenated_target, output_sr)
         logger.info(f"Saved {output}")
 
     # Concatenate and save cumulative residual as sam-other.wav (only if chaining was enabled)
@@ -140,8 +156,16 @@ def merge_and_save(
             logger.info("Concatenating cumulative residual files...")
 
             concatenated_cumulative = concatenate_segments(cumulative_files)
+
+            # Resample if needed
+            if sample_rate is not None and sample_rate != sr:
+                import torchaudio.transforms as T
+
+                resampler = T.Resample(orig_freq=sr, new_freq=sample_rate)
+                concatenated_cumulative = resampler(concatenated_cumulative)
+
             output = output_dir / "sam-other.wav"
-            torchaudio.save(output.as_posix(), concatenated_cumulative, sr)
+            torchaudio.save(output.as_posix(), concatenated_cumulative, output_sr)
             logger.info(f"Saved {output}")
         else:
             logger.warning("No cumulative residual files found")
