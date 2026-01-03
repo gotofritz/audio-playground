@@ -69,3 +69,5 @@ build
 
 .checkpoints
 
+# Diagnostic scripts (moved to CLI)
+check_durations.py
