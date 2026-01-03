@@ -5,22 +5,13 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
+from audio_playground.cli.common import src_option, target_option
 from audio_playground.core.wav_converter import convert_to_wav as convert_to_wav_fn
 
 
 @click.command()
-@click.option(
-    "--src",
-    type=click.Path(exists=True, path_type=Path),
-    required=True,
-    help="Source audio file (any format)",
-)
-@click.option(
-    "--target",
-    type=click.Path(path_type=Path),
-    required=True,
-    help="Target WAV file path",
-)
+@src_option(help_text="Source audio file (any format)")
+@target_option(help_text="Target WAV file path")
 @click.pass_obj
 def to_wav(
     app_context: AppContext,
