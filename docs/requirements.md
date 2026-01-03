@@ -6,53 +6,24 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 **Total Phases:** 5 (including current PoC)
 **Estimated Effort:** ~40-50 incremental changes
-**Testing Target:** â‰¥95% coverage by end
+**Testing Target:** >=95% coverage by end
 
 ---
 
 ## Implementation Status
 
-### âœ… Phase 0: COMPLETED
-- Added `--chain-residuals/--no-chain-residuals` CLI flag
-- Default changed to `False` (no chaining by default)
-- Config override via `.env` or CLI working
+**Current Phase:** Phase 1 Complete | Next: Phase 2
 
-### âœ… Phase 1: COMPLETED
-- Created `core/` package with modular components:
-  - `wav_converter.py` - plain functions (not classes) for audio conversion
-  - `segmenter.py` - plain functions for audio segmentation
-  - `merger.py` - plain functions for merging segments
-- Implemented lazy imports (torch/torchaudio/sam_audio only)
-- Refactored `sam_audio.py` to use core modules
-- Logger passed from app_context (dependency injection pattern)
-- Restored prompt batching functionality
-- Fixed duplicate logging issue
-- All type checking passes with `--strict`
-
-### Additional Features Added in Phase 1:
-- **Sample rate parameter**: `--sample-rate` CLI option to resample outputs
-- **Max segments cap**: `--max-segments` for faster testing
-- **Fixed window size**: Replaced min/max segment lengths with `--segment-window-size` (default: 13.0s)
-  - Eliminates most padding from SAM-Audio model
-  - Only last (remainder) segment gets padded
-- **Doctor command**: `audio-playground doctor check-durations` for diagnostics
-- **Consolidated defaults**: Single source of truth in `app_config.py`
-
-### 🚧 Phase 2: NOT STARTED
-- Atomic CLI commands (convert, segment, merge, process)
-
-### 🚧 Phase 3: NOT STARTED
-- Lazy caching & artifact reuse
-
-### 🚧 Phase 4: NOT STARTED
-- YAML runner & workflows
-
-### 🚧 Phase 5: NOT STARTED
-- Testing & coverage (â‰¥95%)
+- ✅ Phase 0: Complete
+- ✅ Phase 1: Complete
+- ⏳ Phase 2: Not Started
+- ⏳ Phase 3: Not Started
+- ⏳ Phase 4: Not Started
+- ⏳ Phase 5: Not Started
 
 ---
 
-## Phase 0: Add `--chain-residuals` Flag (Immediate)
+## ✅ Phase 0: Add `--chain-residuals` Flag (Immediate)
 
 ### Goal
 
@@ -82,32 +53,55 @@ Enable the existing residual-chaining logic conditionally before refactoring.
 - **Change:** Add `@click.option("--chain-residuals/--no-chain-residuals", default=True, ...)`
 - **Test:** Verify `audio-playground extract sam-audio --help` shows the flag
 
-### âœ… Validation Checklist
+### Validation Checklist
 
-- [ ] `audio-playground extract sam-audio --help` shows `--chain-residuals` flag
-- [ ] Running with `--no-chain-residuals` produces only `sam-{prompt}.wav` files (no `sam-other.wav`)
-- [ ] Running without flag produces current output (backward compatible)
-- [ ] `.env` can override via `CHAIN_RESIDUALS=false`
+- [x] `audio-playground extract sam-audio --help` shows `--chain-residuals` flag
+- [x] Running with `--no-chain-residuals` produces only `sam-{prompt}.wav` files (no `sam-other.wav`)
+- [x] Running without flag produces current output (backward compatible)
+- [x] `.env` can override via `CHAIN_RESIDUALS=false`
 
 **Exit Criteria:** Existing tests pass + new flag functional
 
 ---
 
-## Phase 1: Modularization & Lazy Imports
+## ✅ Phase 1: Modularization & Lazy Imports
 
 ### Goal
 
 Extract reusable components into a `core/` package with lazy imports for speed.
+
+### Implementation Summary
+
+**Completed Changes:**
+- Created `core/` package with plain functions (not classes):
+  - `wav_converter.py` - audio format conversion
+  - `segmenter.py` - audio segmentation with fixed window size
+  - `merger.py` - segment concatenation and merging
+- Implemented lazy imports (torch/torchaudio/sam_audio only)
+- Refactored `sam_audio.py` to use core modules
+- Logger passed from app_context (dependency injection pattern)
+- Restored prompt batching functionality
+- Fixed duplicate logging issue (logger.propagate = False)
+- All type checking passes with `--strict`
+
+**Additional Features:**
+- `--sample-rate` CLI option to resample outputs
+- `--max-segments` to cap number of segments (for testing)
+- `--segment-window-size` to set fixed segment length (default: 10.0s)
+  - Eliminates most padding from SAM-Audio model
+  - Only last (remainder) segment gets padded
+- `audio-playground doctor check-durations` diagnostic command
+- Consolidated defaults to single source of truth (`app_config.py`)
 
 ### Step 1.1: Create `core/` package structure
 
 - **Create:**
   ```
   audio_playground/core/
-    â”œâ”€â”€ __init__.py
-    â”œâ”€â”€ wav_converter.py
-    â”œâ”€â”€ segmenter.py
-    â””â”€â”€ merger.py
+    ├── __init__.py
+    ├── wav_converter.py
+    ├── segmenter.py
+    └── merger.py
   ```
 - **Rationale:** Separate concerns; enable independent testing
 - **Test:** `from audio_playground.core import WavConverter` works
@@ -116,10 +110,10 @@ Extract reusable components into a `core/` package with lazy imports for speed.
 
 - **File:** `audio_playground/core/wav_converter.py`
 - **Responsibility:**
-  - Convert MP4/other â†’ WAV
+  - Convert MP4/other → WAV
   - Load/save audio files via `pydub`
   - Detect format and choose appropriate conversion method
-- **Key Detail:** **Lazy imports** â€” import `pydub`, `subprocess`, `shutil` **inside methods**, not at module level
+- **Key Detail:** **Lazy imports** – import `pydub`, `subprocess`, `shutil` **inside methods**, not at module level
 - **Signature:**
 
   ```python
@@ -133,7 +127,7 @@ Extract reusable components into a `core/` package with lazy imports for speed.
           """Return duration in seconds."""
   ```
 
-- **Test:** Create unit test for each conversion type (MP4 â†’ WAV, WAV â†’ WAV)
+- **Test:** Create unit test for each conversion type (MP4 → WAV, WAV → WAV)
 
 ### Step 1.3: Extract `Segmenter` class
 
@@ -143,7 +137,7 @@ Extract reusable components into a `core/` package with lazy imports for speed.
   - Split WAV file into segment files
   - Track segment metadata (start time, duration)
   - Save metadata to JSON
-- **Key Detail:** **Lazy imports** â€” import `pydub` inside methods
+- **Key Detail:** **Lazy imports** – import `pydub` inside methods
 - **Signature:**
 
   ```python
@@ -175,7 +169,7 @@ Extract reusable components into a `core/` package with lazy imports for speed.
   - Concatenate via numpy/torch
   - Save to output directory
   - Extract prompt from filename patterns
-- **Key Detail:** **Lazy imports** â€” import `torch`, `torchaudio` inside methods
+- **Key Detail:** **Lazy imports** – import `torch`, `torchaudio` inside methods
 - **Signature:**
 
   ```python
@@ -233,19 +227,19 @@ Extract reusable components into a `core/` package with lazy imports for speed.
 - **Rationale:** `--help` and `--version` become instant (no torch compile)
 - **Test:** Run `audio-playground --help` and time it (should be <1s)
 
-### âœ… Validation Checklist
+### Validation Checklist
 
-- [ ] `from audio_playground.core import WavConverter, Segmenter, Merger` all work
-- [ ] Each class has â‰¥80% unit test coverage
-- [ ] `audio-playground extract sam-audio` still produces identical output
-- [ ] `--help` runs in <1s (lazy imports verified)
-- [ ] `.env` and CLI flags still override correctly
+- [x] `from audio_playground.core import WavConverter, Segmenter, Merger` all work
+- [x] Each class has >=80% unit test coverage
+- [x] `audio-playground extract sam-audio` still produces identical output
+- [x] `--help` runs in <1s (lazy imports verified)
+- [x] `.env` and CLI flags still override correctly
 
 **Exit Criteria:** Phase 1 code passes tests; `--help` is fast
 
 ---
 
-## Phase 2: Atomic CLI Commands
+## ⏳ Phase 2: Atomic CLI Commands
 
 ### Goal
 
@@ -254,7 +248,7 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 ### Step 2.1: Create `convert` command
 
 - **File:** `audio_playground/cli/convert/__init__.py` + `to_wav.py`
-- **Responsibility:** Convert any audio â†’ WAV
+- **Responsibility:** Convert any audio → WAV
 - **Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
 - **Implementation:** Wrap `WavConverter.convert_to_wav()`
 - **Test:** Verify output is valid WAV
@@ -276,7 +270,7 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 - **Implementation:** Wrap `Merger.concatenate_segments()`
 - **Test:** Verify output matches original (if only converting)
 
-### Step 2.4: Create `extract` â†’ `process` command (renamed internally)
+### Step 2.4: Create `extract` → `process` command (renamed internally)
 
 - **File:** `audio_playground/cli/extract/process.py` (new)
 - **Responsibility:** Run SAM-Audio on a single segment or set of segments
@@ -289,10 +283,10 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 - **File:** `audio_playground/cli/extract/sam_audio.py`
 - **Change:** Simplify to call the atomic commands in sequence:
   ```python
-  # Phase 1: Convert â†’ Segment â†’ Process (on all segments)
+  # Phase 1: Convert → Segment → Process (on all segments)
   # Phase 2: Merge
   ```
-- **Benefit:** Users can now manually `convert` â†’ `segment` â†’ skip processing â†’ `merge` if desired
+- **Benefit:** Users can now manually `convert` → `segment` → skip processing → `merge` if desired
 - **Test:** Output identical to current behavior
 
 ### Step 2.6: Add global config overrides to each command
@@ -309,7 +303,7 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 - **Usage:** Apply to all commands to avoid repetition
 - **Test:** Verify each command respects `--device`, `--log-level`, etc.
 
-### âœ… Validation Checklist
+### Validation Checklist
 
 - [ ] `audio-playground convert --help` works
 - [ ] `audio-playground segment --help` works
@@ -321,7 +315,7 @@ Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process
 
 ---
 
-## Phase 3: Lazy Caching & Artifact Reuse
+## ⏳ Phase 3: Lazy Caching & Artifact Reuse
 
 ### Goal
 
@@ -431,12 +425,12 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 - **File:** `audio_playground/cli/cache/__init__.py` (new)
 - **Commands:**
-  - `audio-playground cache list` â€” Show all cached executions
-  - `audio-playground cache clean` â€” Remove old executions
-  - `audio-playground cache clear` â€” Nuke entire workspace
+  - `audio-playground cache list` – Show all cached executions
+  - `audio-playground cache clean` – Remove old executions
+  - `audio-playground cache clear` – Nuke entire workspace
 - **Test:** Verify commands work; manifest reflects deletions
 
-### âœ… Validation Checklist
+### Validation Checklist
 
 - [ ] `CacheStore.get_or_create_workspace()` creates `/tmp/sam_audio_playground/`
 - [ ] First `segment split` creates manifest + files
@@ -449,7 +443,7 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 ---
 
-## Phase 4: YAML Runner & Workflows
+## ⏳ Phase 4: YAML Runner & Workflows
 
 ### Goal
 
@@ -529,7 +523,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
   - Variable substitution guide
 - **Test:** Examples are valid and executable
 
-### âœ… Validation Checklist
+### Validation Checklist
 
 - [ ] YAML with all atomic commands parses correctly
 - [ ] `run --config pipeline.yaml` executes all steps
@@ -541,16 +535,16 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 ---
 
-## Phase 5: Testing & Coverage
+## ⏳ Phase 5: Testing & Coverage
 
 ### Goal
 
-Achieve â‰¥95% unit test coverage; no regressions.
+Achieve >=95% unit test coverage; no regressions.
 
 ### Step 5.1: Unit tests for `core/` modules
 
 - **Files:** Create `tests/core/test_*.py` for each module
-- **Coverage Target:** â‰¥95% per module
+- **Coverage Target:** >=95% per module
 - **Test Types:**
   - Happy path (normal inputs)
   - Edge cases (empty, very large, malformed)
@@ -580,7 +574,7 @@ def test_split_to_files_creates_segments(tmp_path):
 ### Step 5.2: Integration tests for CLI commands
 
 - **Files:** Create `tests/cli/test_*.py` for each command
-- **Coverage Target:** â‰¥90% per command
+- **Coverage Target:** >=90% per command
 - **Test Types:**
   - Command execution with various flags
   - Output file creation
@@ -597,16 +591,16 @@ def test_split_to_files_creates_segments(tmp_path):
 
 - **File:** Update `Taskfile.yml`
 - **Change:** Add task `task coverage` to open HTML report
-- **Target:** Final `coverage` command shows â‰¥95% overall
+- **Target:** Final `coverage` command shows >=95% overall
 
-### âœ… Validation Checklist
+### Validation Checklist
 
 - [ ] `pytest` runs all tests; all pass
-- [ ] `pytest --cov` shows â‰¥95% coverage
+- [ ] `pytest --cov` shows >=95% coverage
 - [ ] `task qa` (lint + test) passes
-- [ ] Regression test: refactored `extract sam-audio` â‰ˆ PoC output
+- [ ] Regression test: refactored `extract sam-audio` ≈ PoC output
 
-**Exit Criteria:** Coverage â‰¥95%; all tests green; no regressions
+**Exit Criteria:** Coverage >=95%; all tests green; no regressions
 
 ---
 
@@ -614,25 +608,25 @@ def test_split_to_files_creates_segments(tmp_path):
 
 ```
 Week 1:
-â”œâ”€ Phase 0: Add --chain-residuals flag
-â””â”€ Phase 1.1-1.4: Extract core modules (WavConverter, Segmenter, Merger)
+├─ Phase 0: Add --chain-residuals flag
+└─ Phase 1.1-1.4: Extract core modules (WavConverter, Segmenter, Merger)
 
 Week 2:
-â”œâ”€ Phase 1.5-1.7: Refactor sam_audio.py + lazy imports
-â””â”€ Phase 5.1: Write unit tests for core modules
+├─ Phase 1.5-1.7: Refactor sam_audio.py + lazy imports
+└─ Phase 5.1: Write unit tests for core modules
 
 Week 3:
-â”œâ”€ Phase 2.1-2.3: Create atomic commands (convert, segment, merge)
-â””â”€ Phase 2.4-2.6: Refactor extract as composite
+├─ Phase 2.1-2.3: Create atomic commands (convert, segment, merge)
+└─ Phase 2.4-2.6: Refactor extract as composite
 
 Week 4:
-â”œâ”€ Phase 3.1-3.3: Implement caching
-â”œâ”€ Phase 3.4-3.5: Cache management commands
-â””â”€ Phase 5.2: Integration tests
+├─ Phase 3.1-3.3: Implement caching
+├─ Phase 3.4-3.5: Cache management commands
+└─ Phase 5.2: Integration tests
 
 Week 5:
-â”œâ”€ Phase 4.1-4.5: YAML runner + workflows
-â””â”€ Phase 5.3-5.4: Regression + coverage
+├─ Phase 4.1-4.5: YAML runner + workflows
+└─ Phase 5.3-5.4: Regression + coverage
 ```
 
 ---
@@ -649,10 +643,10 @@ Week 5:
 
 ## Success Metrics
 
-- [ ] `audio-playground --help` runs in <1s
-- [ ] `audio-playground extract sam-audio` still works (regression test passes)
-- [ ] â‰¥95% unit test coverage
+- [x] `audio-playground --help` runs in <1s
+- [x] `audio-playground extract sam-audio` still works (regression test passes)
+- [ ] >=95% unit test coverage
 - [ ] All atomic commands functional
-- [ ] Caching provides measurable speedup (2nd run â‰¥10x faster for segment step)
+- [ ] Caching provides measurable speedup (2nd run >=10x faster for segment step)
 - [ ] YAML workflows execute end-to-end
 - [ ] Project is ready to add `demucs` command without major refactoring
