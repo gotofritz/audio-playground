@@ -1,5 +1,7 @@
 # 🚀 audio-playground
 
+![Coverage](https://raw.githubusercontent.com/gotofritz/audio-playground/badges/coverage.svg)
+
 Playing with sam-audio
 
 ## 📋 Overview
