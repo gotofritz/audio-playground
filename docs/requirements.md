@@ -10,6 +10,48 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ---
 
+## Implementation Status
+
+### âœ… Phase 0: COMPLETED
+- Added `--chain-residuals/--no-chain-residuals` CLI flag
+- Default changed to `False` (no chaining by default)
+- Config override via `.env` or CLI working
+
+### âœ… Phase 1: COMPLETED
+- Created `core/` package with modular components:
+  - `wav_converter.py` - plain functions (not classes) for audio conversion
+  - `segmenter.py` - plain functions for audio segmentation
+  - `merger.py` - plain functions for merging segments
+- Implemented lazy imports (torch/torchaudio/sam_audio only)
+- Refactored `sam_audio.py` to use core modules
+- Logger passed from app_context (dependency injection pattern)
+- Restored prompt batching functionality
+- Fixed duplicate logging issue
+- All type checking passes with `--strict`
+
+### Additional Features Added in Phase 1:
+- **Sample rate parameter**: `--sample-rate` CLI option to resample outputs
+- **Max segments cap**: `--max-segments` for faster testing
+- **Fixed window size**: Replaced min/max segment lengths with `--segment-window-size` (default: 13.0s)
+  - Eliminates most padding from SAM-Audio model
+  - Only last (remainder) segment gets padded
+- **Doctor command**: `audio-playground doctor check-durations` for diagnostics
+- **Consolidated defaults**: Single source of truth in `app_config.py`
+
+### 🚧 Phase 2: NOT STARTED
+- Atomic CLI commands (convert, segment, merge, process)
+
+### 🚧 Phase 3: NOT STARTED
+- Lazy caching & artifact reuse
+
+### 🚧 Phase 4: NOT STARTED
+- YAML runner & workflows
+
+### 🚧 Phase 5: NOT STARTED
+- Testing & coverage (â‰¥95%)
+
+---
+
 ## Phase 0: Add `--chain-residuals` Flag (Immediate)
 
 ### Goal
