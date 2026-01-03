@@ -1,68 +1,39 @@
-import json
 import logging
-import shutil
-import subprocess
+import traceback
 import uuid
 from pathlib import Path
-from typing import cast
 
 import click
-import numpy as np
-from torch import Tensor
 
 from audio_playground.app_context import AppContext
 from audio_playground.config.app_config import AudioPlaygroundConfig, Model
+from audio_playground.core import segmenter, wav_converter
 
 
-def create_segments(
-    total_length: float, min_length: float = 9, max_length: float = 17
-) -> list[float]:
-    """Create even segments with target lengths between min and max"""
-    target_length = (min_length + max_length) / 2
-    num_segments = max(1, round(total_length / target_length))
-
-    # Create equal segments
-    segment_length = total_length / num_segments
-    segments = [segment_length] * (num_segments - 1)
-
-    # Last segment gets the remainder to ensure exact total
-    segments.append(total_length - sum(segments))
-
-    return segments
-
-
-def concatenate_segments(segment_files: list[Path]) -> Tensor:
+def batch_items(items: list[str], batch_size: int) -> list[list[str]]:
     """
-    Simple concatenation of audio segments.
+    Split a list of items into batches of specified size.
 
     Args:
-        segment_files: List of paths to audio segment files (sorted)
+        items: List of items to batch
+        batch_size: Maximum size of each batch (must be >= 1)
 
     Returns:
-        Concatenated audio tensor (channels, samples)
+        List of batches, where each batch is a list of items
+
+    Example:
+        >>> batch_items(["a", "b", "c", "d"], 2)
+        [["a", "b"], ["c", "d"]]
+        >>> batch_items(["a", "b", "c"], 2)
+        [["a", "b"], ["c"]]
     """
-    import torch
-    import torchaudio
+    if batch_size < 1:
+        raise ValueError(f"batch_size must be >= 1, got {batch_size}")
 
-    if not segment_files:
-        return torch.tensor([])
-
-    if len(segment_files) == 1:
-        audio, _ = torchaudio.load(segment_files[0])
-        # casting purely for mypy; there is nothing wrong with just
-        # returning audio.float()
-        return cast(Tensor, audio.float())
-
-    # Load all segments
-    all_audio: list[Tensor] = []
-    for seg_file in segment_files:
-        audio, _ = torchaudio.load(seg_file)
-        all_audio.append(cast(Tensor, audio.squeeze(0)))
-
-    # Simple concatenation
-    concatenated = np.concatenate(all_audio)
-
-    return torch.from_numpy(concatenated).unsqueeze(0).float()
+    batches: list[list[str]] = []
+    for i in range(0, len(items), batch_size):
+        batches.append(items[i : i + batch_size])
+    return batches
 
 
 def phase_1_segment_and_process(
@@ -79,7 +50,6 @@ def phase_1_segment_and_process(
     """
     import torch
     import torchaudio
-    from pydub import AudioSegment
     from sam_audio import SAMAudio, SAMAudioProcessor
 
     logger.info("=== PHASE 1: Segmentation and Processing ===")
@@ -106,74 +76,34 @@ def phase_1_segment_and_process(
 
     # Convert to WAV if needed
     wav_file = tmp_path / "audio.wav"
-    if src_path.suffix.lower() == ".mp4":
-        logger.info(f"Converting {src_path} to WAV...")
-        subprocess.run(
-            ["ffmpeg", "-i", src_path.as_posix(), "-c:a", "pcm_s16le", wav_file.as_posix()],
-            check=True,
-            capture_output=True,
-            stdin=subprocess.DEVNULL,
-        )
-    elif src_path.suffix.lower() == ".wav":
-        shutil.copy(src_path, wav_file)
-    else:
-        # Try to load and convert
-        audio = AudioSegment.from_file(src_path)
-        audio.export(wav_file.as_posix(), format="wav")
+    logger.info(f"Converting {src_path} to WAV...")
+    wav_converter.convert_to_wav(src_path, wav_file)
 
-    # Load audio and create variable-length segments
-    audio = AudioSegment.from_file(wav_file.as_posix())
-    total_length = audio.duration_seconds
+    # Load audio duration and create fixed-size segments
+    total_length = wav_converter.load_audio_duration(wav_file)
     logger.info(f"Total audio length: {total_length:.2f} seconds")
 
-    # Create segments with variable lengths (9-17s) using min/max
-    segment_lengths: list[float] = create_segments(
+    # Create segments with fixed window size
+    segment_lengths: list[float] = segmenter.create_segments(
         total_length,
-        min_length=config.min_segment_length,
-        max_length=config.max_segment_length,
+        window_size=config.segment_window_size,
+        max_segments=config.max_segments,
     )
+    if config.max_segments:
+        logger.info(f"Limiting to max {config.max_segments} segments for testing")
     logger.info(
-        f"Creating {len(segment_lengths)} segments: {[round(s, 2) for s in segment_lengths]}"
+        f"Creating {len(segment_lengths)} segments ({config.segment_window_size}s window): "
+        f"{[round(s, 2) for s in segment_lengths]}"
     )
 
-    segment_files: list[Path] = []
-    segment_metadata: list[tuple[float, float]] = []
-    current_time_ms = 0
-
-    for i, seg_length in enumerate(segment_lengths):
-        # Simple concatenation - segments end-to-end
-        seg_start_ms = int(current_time_ms)
-        seg_end_ms = int(current_time_ms + seg_length * 1000)
-
-        segment = audio[seg_start_ms:seg_end_ms]
-        segment_path = tmp_path / f"segment-{i:03d}.wav"
-        segment.export(segment_path.as_posix(), format="wav")
-        segment_files.append(segment_path)
-
-        # Load the saved segment to get actual duration (accounts for encoding)
-        saved_audio = AudioSegment.from_file(segment_path.as_posix())
-        actual_duration_s = saved_audio.duration_seconds
-        start_time_s = seg_start_ms / 1000.0
-
-        segment_metadata.append((start_time_s, actual_duration_s))
-
-        logger.debug(
-            f"Created {segment_path.name} (actual: {actual_duration_s:.2f}s at {start_time_s:.1f}s)"
-        )
-
-        current_time_ms += int(seg_length * 1000)
-
+    # Split audio into segment files
+    segment_files, segment_metadata = segmenter.split_to_files(wav_file, tmp_path, segment_lengths)
     logger.info(f"Created {len(segment_files)} segments")
 
-    # Save segment metadata
-    metadata_file = tmp_path / "segment_metadata.json"
-    metadata: dict[str, float | list[tuple[float, float]]] = {
-        "overlap_duration": 0.0,
-        "segments": segment_metadata,
-    }
-    with open(metadata_file, "w") as f:
-        json.dump(metadata, f)
-    logger.info(f"Saved segment metadata to {metadata_file}")
+    for i, (start_time_s, actual_duration_s) in enumerate(segment_metadata):
+        logger.debug(
+            f"Created segment-{i:03d}.wav (actual: {actual_duration_s:.2f}s at {start_time_s:.1f}s)"
+        )
 
     # Setup model
     accelerator = (
@@ -213,15 +143,24 @@ def phase_1_segment_and_process(
             ] = {}  # Store residuals for each prompt from original audio
 
             # Step 1: Run all prompts on the original audio to get clean targets
-            for prompt_idx, prompt in enumerate(prompts_list):
-                safe_prompt = prompt.replace(" ", "_").replace("/", "_")
+            # Process prompts in batches for efficiency
+            prompt_batches = batch_items(prompts_list, config.batch_prompts)
+            logger.debug(
+                f"Processing {len(prompts_list)} prompts in {len(prompt_batches)} batch(es) "
+                f"(batch_size={config.batch_prompts})"
+            )
+
+            for batch_idx, prompt_batch in enumerate(prompt_batches):
                 logger.debug(
-                    f"Processing prompt {prompt_idx + 1}/{len(prompts_list)} on original: {prompt}"
+                    f"Processing batch {batch_idx + 1}/{len(prompt_batches)}: {prompt_batch}"
                 )
 
+                # Process all prompts in this batch together
+                # SAM-Audio processor requires len(audios) == len(descriptions)
+                # So we duplicate the audio path for each prompt in the batch
                 inputs = processor(
-                    audios=[audio_path.as_posix()],
-                    descriptions=[prompt],
+                    audios=[audio_path.as_posix()] * len(prompt_batch),
+                    descriptions=prompt_batch,
                 ).to(device)
 
                 result = model.separate(
@@ -232,20 +171,24 @@ def phase_1_segment_and_process(
 
                 sr = processor.audio_sampling_rate
 
-                # Save target for this prompt
-                target_out = tmp_path / f"{audio_path.stem}-target-{safe_prompt}.wav"
-                target_audio = result.target[0].unsqueeze(0).cpu()
-                torchaudio.save(target_out.as_posix(), target_audio, sr)
-                target_files_by_prompt[prompt].append(target_out)
+                # Extract and save individual results for each prompt in the batch
+                for prompt_idx_in_batch, prompt in enumerate(prompt_batch):
+                    safe_prompt = prompt.replace(" ", "_").replace("/", "_")
 
-                # Save residual for this prompt (from original)
-                residual_out = tmp_path / f"{audio_path.stem}-residual-{safe_prompt}.wav"
-                residual_tensor = result.residual[0]
-                torchaudio.save(residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr)
-                residual_files_by_prompt[prompt].append(residual_out)
+                    # Save target for this prompt
+                    target_out = tmp_path / f"{audio_path.stem}-target-{safe_prompt}.wav"
+                    target_audio = result.target[prompt_idx_in_batch].unsqueeze(0).cpu()
+                    torchaudio.save(target_out.as_posix(), target_audio, sr)
+                    target_files_by_prompt[prompt].append(target_out)
 
-                # Store residual tensor for chaining (only keep, don't process yet)
-                segment_residuals[prompt] = residual_tensor
+                    # Save residual for this prompt (from original)
+                    residual_out = tmp_path / f"{audio_path.stem}-residual-{safe_prompt}.wav"
+                    residual_tensor = result.residual[prompt_idx_in_batch]
+                    torchaudio.save(residual_out.as_posix(), residual_tensor.unsqueeze(0).cpu(), sr)
+                    residual_files_by_prompt[prompt].append(residual_out)
+
+                    # Store residual tensor for chaining (only keep, don't process yet)
+                    segment_residuals[prompt] = residual_tensor
 
             # Step 2: Chain subsequent prompts on residuals to build cumulative residual
             # Only run if chain_residuals is enabled and there are multiple prompts
@@ -312,78 +255,16 @@ def phase_2_blend_and_save(
     Phase 2: Blend segments and save final output files.
     Runs regardless of whether we're continuing or not.
 
-    This phase only imports torchaudio (lightweight).
+    This phase uses merger module which lazily imports torchaudio.
     """
-    import torchaudio
+    from audio_playground.core import merger
 
     logger.info("=== PHASE 2: Concatenation and Final Output ===")
 
     target_path = Path(target).expanduser() if target else config.target_dir
-    target_path.mkdir(parents=True, exist_ok=True)
 
-    # Load segment files
-    segment_files: list[Path] = sorted(
-        [
-            f
-            for f in tmp_path.glob("segment-*.wav")
-            if "-target" not in f.name and "-residual" not in f.name and "-temp" not in f.name
-        ]
-    )
-
-    if not segment_files:
-        raise FileNotFoundError(f"No segment files found in {tmp_path}")
-
-    logger.info(f"Found {len(segment_files)} segments")
-
-    # Get sample rate from first TARGET file (what the model actually used)
-    first_target = sorted(tmp_path.glob("segment-*-target-*.wav"))
-    if first_target:
-        audio, sr_int = torchaudio.load(first_target[0])
-        sr = int(sr_int)
-        logger.info(f"Using sample rate from model output files: {sr}")
-    else:
-        # Fallback to original segment sample rate
-        audio, sr_int = torchaudio.load(segment_files[0])
-        sr = int(sr_int)
-        logger.warning(f"No target files found yet, using original segment sample rate: {sr}")
-
-    # Find all prompts from target files
-    prompts: dict[str, list[Path]] = {}
-    for f in tmp_path.glob("segment-*-target-*.wav"):
-        # Extract prompt from filename: segment-000-target-bass.wav -> bass
-        parts = f.stem.split("-target-")
-        if len(parts) == 2:
-            prompt = parts[1]
-            if prompt not in prompts:
-                prompts[prompt] = []
-            prompts[prompt].append(f)
-
-    # Concatenate and save each prompt as sam-{prompt}.wav
-    for prompt in sorted(prompts.keys()):
-        logger.info(f"Concatenating target files for prompt: {prompt}")
-        target_files: list[Path] = sorted(prompts[prompt])
-
-        concatenated_target = concatenate_segments(target_files)
-        output = target_path / f"sam-{prompt}.wav"
-        torchaudio.save(output.as_posix(), concatenated_target, sr)
-        logger.info(f"Saved {output}")
-
-    # Concatenate and save cumulative residual as sam-other.wav (only if chaining was enabled)
-    if config.chain_residuals:
-        cumulative_files: list[Path] = sorted(
-            tmp_path.glob("segment-*-residual-cumulative-final.wav")
-        )
-        if cumulative_files:
-            logger.info("Concatenating cumulative residual files...")
-
-            concatenated_cumulative = concatenate_segments(cumulative_files)
-            output = target_path / "sam-other.wav"
-            torchaudio.save(output.as_posix(), concatenated_cumulative, sr)
-            logger.info(f"Saved {output}")
-        else:
-            logger.warning("No cumulative residual files found")
-    else:
-        logger.debug("Skipping cumulative residual output (--no-chain-residuals)")
+    # Use merger to handle all merging logic
+    merger.merge_and_save(tmp_path, target_path, logger, config.chain_residuals, config.sample_rate)
 
 
 @click.command(name="test-run3")
@@ -415,8 +296,23 @@ def phase_2_blend_and_save(
 )
 @click.option(
     "--chain-residuals/--no-chain-residuals",
-    default=True,
-    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used.",
+    default=None,
+    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used. If not specified, uses config default.",
+)
+@click.option(
+    "--sample-rate",
+    type=int,
+    help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
+)
+@click.option(
+    "--max-segments",
+    type=int,
+    help="Maximum number of segments to create (useful for testing). If not specified, uses calculated number.",
+)
+@click.option(
+    "--segment-window-size",
+    type=float,
+    help="Fixed segment length in seconds. All segments except the last will be this size. If not specified, uses config default.",
 )
 @click.pass_context
 def sam_audio(
@@ -426,7 +322,10 @@ def sam_audio(
     prompts: tuple[str, ...],
     continue_from: str | None,
     model: Model = Model.LARGE,
-    chain_residuals: bool = False,
+    chain_residuals: bool | None = None,
+    sample_rate: int | None = None,
+    max_segments: int | None = None,
+    segment_window_size: float | None = None,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -439,11 +338,6 @@ def sam_audio(
         logger = app_context.logger
         config = app_context.app_config
 
-        logger.info("Starting...")
-        logger.info(f"Target: {target or config.target_dir}")
-        logger.info(f"Prompts: {list(prompts) if prompts else config.prompts}")
-        logger.info(f"Chain residuals: {chain_residuals}")
-
         # Override config with CLI arguments if provided
         if src:
             config.source_file = Path(src)
@@ -451,7 +345,25 @@ def sam_audio(
             config.target_dir = Path(target).expanduser()
         if prompts:
             config.prompts = list(prompts)
-        config.chain_residuals = chain_residuals
+        if chain_residuals is not None:
+            config.chain_residuals = chain_residuals
+        if sample_rate is not None:
+            config.sample_rate = sample_rate
+        if max_segments is not None:
+            config.max_segments = max_segments
+        if segment_window_size is not None:
+            config.segment_window_size = segment_window_size
+
+        # Log final configuration
+        logger.info("Starting...")
+        logger.info(f"Target: {config.target_dir}")
+        logger.info(f"Prompts: {config.prompts}")
+        logger.info(f"Chain residuals: {config.chain_residuals}")
+        logger.info(f"Segment window size: {config.segment_window_size}s")
+        if config.sample_rate:
+            logger.info(f"Target sample rate: {config.sample_rate} Hz")
+        if config.max_segments:
+            logger.info(f"Max segments: {config.max_segments}")
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:
@@ -466,5 +378,7 @@ def sam_audio(
         logger.info("All done")
 
     except Exception as e:
-        click.echo(f"CLI Error: {str(e)}")
+        logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
+        logger.error(f"Traceback:\n{traceback.format_exc()}")
+        click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}")
         ctx.exit(1)

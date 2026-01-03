@@ -24,8 +24,14 @@ class AudioPlaygroundConfig(BaseSettings):
     prompts: list[str] = ["bass"]
 
     # Segment configuration
-    min_segment_length: float = 9.0
-    max_segment_length: float = 17.0
+    segment_window_size: float = Field(
+        default=10.0,
+        description="Fixed segment length in seconds. All segments except the last will be this size.",
+    )
+    max_segments: int | None = Field(
+        default=None,
+        description="Maximum number of segments to create (None = no limit). Useful for testing.",
+    )
 
     # Model configuration
     model_item: Model = Model.SMALL
@@ -42,6 +48,11 @@ class AudioPlaygroundConfig(BaseSettings):
     chain_residuals: bool = Field(
         default=False,
         description="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts are used",
+    )
+
+    sample_rate: int | None = Field(
+        default=None,
+        description="Target sample rate in Hz for output files. If None, uses original sample rate.",
     )
 
     model_config = SettingsConfigDict(

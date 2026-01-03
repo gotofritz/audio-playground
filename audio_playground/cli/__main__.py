@@ -16,6 +16,7 @@ import click
 from rich.console import Console
 
 from audio_playground.app_context import AppContext
+from audio_playground.cli.doctor import doctor
 from audio_playground.cli.extract import extract
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], default_map={"obj": {}})
@@ -38,6 +39,7 @@ def cli(ctx: click.Context) -> None:
     ctx.ensure_object(AppContext)
 
 
+cli.add_command(doctor)
 cli.add_command(extract)
 
 
