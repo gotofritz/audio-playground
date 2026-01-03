@@ -10,6 +10,8 @@ jobs:
   qa:
     name: Code Quality Checks
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # Needed to push to badges branch
 
     steps:
       - name: Checkout code
@@ -59,18 +61,20 @@ jobs:
         run: |
           pip install coverage-badge
           coverage-badge -o coverage.svg -f
+          # Create a temporary directory with just the badge
+          mkdir -p /tmp/badge
+          cp coverage.svg /tmp/badge/
 
       - name: Deploy coverage badge
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: peaceiris/actions-gh-pages@v4
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: .
+          publish_dir: /tmp/badge
           publish_branch: badges
-          keep_files: true
+          keep_files: false
           user_name: 'github-actions[bot]'
           user_email: 'github-actions[bot]@users.noreply.github.com'
-          include: coverage.svg
 
       - name: Upload coverage report
         if: always()
