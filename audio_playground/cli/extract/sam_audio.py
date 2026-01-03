@@ -311,6 +311,11 @@ def phase_2_blend_and_save(
     type=int,
     help="Maximum number of segments to create (useful for testing). If not specified, uses calculated number.",
 )
+@click.option(
+    "--segment-window-size",
+    type=float,
+    help="Fixed segment length in seconds (default: 14.0). All segments except the last will be this size.",
+)
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
@@ -322,6 +327,7 @@ def sam_audio(
     chain_residuals: bool = False,
     sample_rate: int | None = None,
     max_segments: int | None = None,
+    segment_window_size: float | None = None,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -342,6 +348,8 @@ def sam_audio(
             logger.info(f"Target sample rate: {sample_rate} Hz")
         if max_segments:
             logger.info(f"Max segments: {max_segments}")
+        if segment_window_size:
+            logger.info(f"Segment window size: {segment_window_size}s")
 
         # Override config with CLI arguments if provided
         if src:
@@ -355,6 +363,8 @@ def sam_audio(
             config.sample_rate = sample_rate
         if max_segments is not None:
             config.max_segments = max_segments
+        if segment_window_size is not None:
+            config.segment_window_size = segment_window_size
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:
