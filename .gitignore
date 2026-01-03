@@ -69,5 +69,3 @@ build
 
 .checkpoints
 
-# Diagnostic scripts
-check_durations.py
