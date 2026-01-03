@@ -8,7 +8,7 @@ from pydub import AudioSegment
 
 def create_segments(
     total_length: float,
-    window_size: float = 13.0,
+    window_size: float,
     max_segments: int | None = None,
 ) -> list[float]:
     """
@@ -16,7 +16,7 @@ def create_segments(
 
     Args:
         total_length: Total audio duration in seconds
-        window_size: Fixed segment length in seconds (default: 13.0)
+        window_size: Fixed segment length in seconds
         max_segments: Maximum number of segments to create (None = no limit)
 
     Returns:

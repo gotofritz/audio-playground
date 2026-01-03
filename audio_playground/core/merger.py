@@ -76,7 +76,7 @@ def merge_and_save(
     tmp_dir: Path,
     output_dir: Path,
     logger: Logger,
-    chain_residuals: bool = True,
+    chain_residuals: bool,
     sample_rate: int | None = None,
 ) -> None:
     """

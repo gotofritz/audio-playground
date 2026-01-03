@@ -296,8 +296,8 @@ def phase_2_blend_and_save(
 )
 @click.option(
     "--chain-residuals/--no-chain-residuals",
-    default=False,
-    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used.",
+    default=None,
+    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used. If not specified, uses config default.",
 )
 @click.option(
     "--sample-rate",
@@ -312,7 +312,7 @@ def phase_2_blend_and_save(
 @click.option(
     "--segment-window-size",
     type=float,
-    help="Fixed segment length in seconds (default: 14.0). All segments except the last will be this size.",
+    help="Fixed segment length in seconds. All segments except the last will be this size. If not specified, uses config default.",
 )
 @click.pass_context
 def sam_audio(
@@ -322,7 +322,7 @@ def sam_audio(
     prompts: tuple[str, ...],
     continue_from: str | None,
     model: Model = Model.LARGE,
-    chain_residuals: bool = False,
+    chain_residuals: bool | None = None,
     sample_rate: int | None = None,
     max_segments: int | None = None,
     segment_window_size: float | None = None,
@@ -338,17 +338,6 @@ def sam_audio(
         logger = app_context.logger
         config = app_context.app_config
 
-        logger.info("Starting...")
-        logger.info(f"Target: {target or config.target_dir}")
-        logger.info(f"Prompts: {list(prompts) if prompts else config.prompts}")
-        logger.info(f"Chain residuals: {chain_residuals}")
-        if sample_rate:
-            logger.info(f"Target sample rate: {sample_rate} Hz")
-        if max_segments:
-            logger.info(f"Max segments: {max_segments}")
-        if segment_window_size:
-            logger.info(f"Segment window size: {segment_window_size}s")
-
         # Override config with CLI arguments if provided
         if src:
             config.source_file = Path(src)
@@ -356,13 +345,25 @@ def sam_audio(
             config.target_dir = Path(target).expanduser()
         if prompts:
             config.prompts = list(prompts)
-        config.chain_residuals = chain_residuals
+        if chain_residuals is not None:
+            config.chain_residuals = chain_residuals
         if sample_rate is not None:
             config.sample_rate = sample_rate
         if max_segments is not None:
             config.max_segments = max_segments
         if segment_window_size is not None:
             config.segment_window_size = segment_window_size
+
+        # Log final configuration
+        logger.info("Starting...")
+        logger.info(f"Target: {config.target_dir}")
+        logger.info(f"Prompts: {config.prompts}")
+        logger.info(f"Chain residuals: {config.chain_residuals}")
+        logger.info(f"Segment window size: {config.segment_window_size}s")
+        if config.sample_rate:
+            logger.info(f"Target sample rate: {config.sample_rate} Hz")
+        if config.max_segments:
+            logger.info(f"Max segments: {config.max_segments}")
 
         # Phase 1: Segment and process (only if not continuing)
         if continue_from:
