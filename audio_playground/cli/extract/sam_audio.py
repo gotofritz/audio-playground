@@ -264,9 +264,7 @@ def phase_2_blend_and_save(
     target_path = Path(target).expanduser() if target else config.target_dir
 
     # Use merger to handle all merging logic
-    merger.merge_and_save(
-        tmp_path, target_path, logger, config.chain_residuals, config.sample_rate
-    )
+    merger.merge_and_save(tmp_path, target_path, logger, config.chain_residuals, config.sample_rate)
 
 
 @click.command(name="test-run3")

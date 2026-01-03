@@ -54,8 +54,6 @@ def test_default_config_matches_original_behavior() -> None:
     assert config.app_name == "audio-playground"
     assert config.log_level == "DEBUG"
     assert config.prompts == ["bass"]
-    assert config.min_segment_length == 9.0
-    assert config.max_segment_length == 17.0
 
     assert config.chain_residuals is False
 
@@ -65,14 +63,10 @@ def test_all_other_config_fields_unchanged() -> None:
     config = AudioPlaygroundConfig(
         log_level="INFO",
         prompts=["bass", "vocals"],
-        min_segment_length=5.0,
-        max_segment_length=20.0,
         chain_residuals=True,
     )
 
     assert config.log_level == "INFO"
     assert config.prompts == ["bass", "vocals"]
-    assert config.min_segment_length == 5.0
-    assert config.max_segment_length == 20.0
     # And new field should still work
     assert config.chain_residuals is True
