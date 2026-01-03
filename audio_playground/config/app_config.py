@@ -25,7 +25,7 @@ class AudioPlaygroundConfig(BaseSettings):
 
     # Segment configuration
     segment_window_size: float = Field(
-        default=13.0,
+        default=10.0,
         description="Fixed segment length in seconds. All segments except the last will be this size.",
     )
     max_segments: int | None = Field(

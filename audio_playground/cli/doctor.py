@@ -1,6 +1,5 @@
 """Doctor commands for diagnostics and troubleshooting."""
 
-import sys
 from pathlib import Path
 
 import click
@@ -39,9 +38,7 @@ def check_durations(ctx: click.Context, tmp_dir: str) -> None:
     logger.info("=== Original Segments (before model) ===")
     segment_files = sorted(tmp_path.glob("segment-[0-9]*.wav"))
     segment_files = [
-        f
-        for f in segment_files
-        if "-target" not in f.name and "-residual" not in f.name
+        f for f in segment_files if "-target" not in f.name and "-residual" not in f.name
     ]
 
     total_original = 0.0
@@ -66,9 +63,7 @@ def check_durations(ctx: click.Context, tmp_dir: str) -> None:
             audio, sr = torchaudio.load(f)
             duration = audio.shape[1] / sr
             total_target += duration
-            logger.info(
-                f"{f.name}: {duration:.6f}s ({audio.shape[1]} samples @ {sr} Hz)"
-            )
+            logger.info(f"{f.name}: {duration:.6f}s ({audio.shape[1]} samples @ {sr} Hz)")
 
         logger.info(f"\nTotal target segments: {total_target:.6f}s")
         logger.info(f"Difference: {total_target - total_original:.6f}s")
