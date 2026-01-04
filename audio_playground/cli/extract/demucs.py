@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
-from audio_playground.cli.common import output_dir_option, src_option
+from audio_playground.cli.common import output_dir_option, src_option, suffix_option
 
 
 @click.command(name="demucs")
@@ -43,12 +43,7 @@ from audio_playground.cli.common import output_dir_option, src_option
     default=None,
     help="Show progress bar during processing. If not specified, uses config default.",
 )
-@click.option(
-    "--suffix",
-    type=str,
-    default=None,
-    help="Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav'). Use empty string for no suffix. If not specified, uses config default.",
-)
+@suffix_option()
 @click.pass_context
 def demucs(
     ctx: click.Context,
