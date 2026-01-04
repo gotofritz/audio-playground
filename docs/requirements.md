@@ -73,7 +73,33 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Outputs separated stems to output directory
 - **Test:** Verify produces separated audio stems
 
----
+### Step 2.6: Make `extract sam-audio` a Composite Command
+
+- **File:** `audio_playground/cli/extract/sam_audio.py`
+- **Change:** Simplify to call the atomic commands in sequence:
+  ```python
+  # Workflow:
+  # 1. convert to-wav (src → wav)
+  # 2. segment split (wav → segments)
+  # 3. extract process-sam-audio (segments → processed segments)
+  # 4. merge concat (processed segments → final outputs)
+  ```
+- **Benefit:** Users can now manually run individual steps if desired
+- **Test:** Output identical to current behavior
+
+### Step 2.7: Create `extract demucs` Composite Command
+
+- **File:** `audio_playground/cli/extract/demucs.py` (new)
+- **Responsibility:** Full Demucs extraction pipeline
+- **Usage:** `audio-playground extract demucs --src input.mp4 --output-dir ./out`
+- **Change:** Call atomic commands in sequence:
+  ```python
+  # Workflow:
+  # 1. convert to-wav (src → wav)
+  # 2. extract process-demucs (wav → separated stems)
+  ```
+- **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
+- **Test:** Verify separated stems are produced
 
 ## ⏳ Phase 3: PyTorch Performance Optimizations (Platform-Agnostic)
 
@@ -335,36 +361,6 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Installation instructions
   - Performance characteristics
   - Troubleshooting common issues
-
-### Step 2.6: Make `extract sam-audio` a Composite Command
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Simplify to call the atomic commands in sequence:
-  ```python
-  # Workflow:
-  # 1. convert to-wav (src → wav)
-  # 2. segment split (wav → segments)
-  # 3. extract process-sam-audio (segments → processed segments)
-  # 4. merge concat (processed segments → final outputs)
-  ```
-- **Benefit:** Users can now manually run individual steps if desired
-- **Test:** Output identical to current behavior
-
-### Step 2.7: Create `extract demucs` Composite Command
-
-- **File:** `audio_playground/cli/extract/demucs.py` (new)
-- **Responsibility:** Full Demucs extraction pipeline
-- **Usage:** `audio-playground extract demucs --src input.mp4 --output-dir ./out`
-- **Change:** Call atomic commands in sequence:
-  ```python
-  # Workflow:
-  # 1. convert to-wav (src → wav)
-  # 2. extract process-demucs (wav → separated stems)
-  ```
-- **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
-- **Test:** Verify separated stems are produced
-
----
 
 ## ⏳ Phase 5: Add Global Config Overrides to Each Command
 
