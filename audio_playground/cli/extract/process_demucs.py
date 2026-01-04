@@ -18,8 +18,8 @@ def process_audio_with_demucs(
     shifts: int,
     num_workers: int,
     logger: logging.Logger,
+    suffix: str,
     show_progress: bool = True,
-    suffix: str = "demucs",
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -32,8 +32,9 @@ def process_audio_with_demucs(
         shifts: Number of random shifts for equivariant stabilization
         num_workers: Number of worker threads
         logger: Logger instance
+        suffix: Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav').
+                Should come from config.demucs_suffix.
         show_progress: Show progress bar during processing
-        suffix: Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav')
     """
     # Lazy imports for performance
     import torch
@@ -241,8 +242,8 @@ def process_demucs(
             shifts=shifts_value,
             num_workers=num_workers_value,
             logger=logger,
-            show_progress=show_progress,
             suffix=suffix_value,
+            show_progress=show_progress,
         )
 
         logger.info("All done!")

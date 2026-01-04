@@ -152,8 +152,8 @@ def demucs(
             shifts=shifts_value,
             num_workers=num_workers_value,
             logger=logger,
-            show_progress=show_progress,
             suffix=suffix_value,
+            show_progress=show_progress,
         )
 
         logger.info("All done!")
