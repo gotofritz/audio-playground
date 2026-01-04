@@ -36,7 +36,7 @@ class AudioPlaygroundConfig(BaseSettings):
     # Model configuration
     model_item: Model = Model.SMALL
     predict_spans: bool = False
-    reranking_candidates: int = 8
+    reranking_candidates: int = 1
     overlap_ms: int = 1000
 
     device: str = "auto"

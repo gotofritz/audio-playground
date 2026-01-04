@@ -12,230 +12,36 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Step 2.1 Complete
+**Current Phase:** Phase 2 In Progress | Steps 2.1-2.3 Complete
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Step 2.1 complete)
+- 🚧 Phase 2: In Progress (Steps 2.1-2.3 complete)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
 
 ---
 
-## ✅ Phase 0: Add `--chain-residuals` Flag (Immediate)
+## ✅ Phase 0: Add `--chain-residuals` Flag
 
-### Goal
+**Status:** ✅ Complete
 
-Enable the existing residual-chaining logic conditionally before refactoring.
-
-### Step 0.1: Add config option
-
-- **File:** `audio_playground/config/app_config.py`
-- **Change:** Add field `chain_residuals: bool = True` to `AudioPlaygroundConfig`
-- **Rationale:** Defaults to `True` (current behavior) for backward compatibility
-- **Test:** Verify field loads from `.env` and CLI override works
-
-### Step 0.2: Update `sam_audio.py` to respect flag
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Wrap Phase 1's "residual chaining" block with condition:
-  ```python
-  if config.chain_residuals and len(prompts_list) > 1:
-      # existing chaining logic
-  ```
-- **Rationale:** Allows users to skip cumulative residual computation
-- **Test:** Run with flag on/off, verify output files match expectations
-
-### Step 0.3: Add CLI flag to command
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Add `@click.option("--chain-residuals/--no-chain-residuals", default=True, ...)`
-- **Test:** Verify `audio-playground extract sam-audio --help` shows the flag
-
-### Validation Checklist
-
-- [x] `audio-playground extract sam-audio --help` shows `--chain-residuals` flag
-- [x] Running with `--no-chain-residuals` produces only `sam-{prompt}.wav` files (no `sam-other.wav`)
-- [x] Running without flag produces current output (backward compatible)
-- [x] `.env` can override via `CHAIN_RESIDUALS=false`
-
-**Exit Criteria:** Existing tests pass + new flag functional
+Added conditional residual-chaining logic with `--chain-residuals` flag to `AudioPlaygroundConfig`. Flag controls whether cumulative residual (`sam-other.wav`) is computed when multiple prompts are used. Defaults to `False` for cleaner output.
 
 ---
 
 ## ✅ Phase 1: Modularization & Lazy Imports
 
-### Goal
+**Status:** ✅ Complete
 
-Extract reusable components into a `core/` package with lazy imports for speed.
+Created `core/` package with modular functions:
 
-### Implementation Summary
+- `wav_converter.py` - audio format conversion and duration loading
+- `segmenter.py` - fixed-window audio segmentation
+- `merger.py` - segment concatenation with prompt-based file matching
 
-**Completed Changes:**
-- Created `core/` package with plain functions (not classes):
-  - `wav_converter.py` - audio format conversion
-  - `segmenter.py` - audio segmentation with fixed window size
-  - `merger.py` - segment concatenation and merging
-- Implemented lazy imports (torch/torchaudio/sam_audio only)
-- Refactored `sam_audio.py` to use core modules
-- Logger passed from app_context (dependency injection pattern)
-- Restored prompt batching functionality
-- Fixed duplicate logging issue (logger.propagate = False)
-- All type checking passes with `--strict`
-
-**Additional Features:**
-- `--sample-rate` CLI option to resample outputs
-- `--max-segments` to cap number of segments (for testing)
-- `--segment-window-size` to set fixed segment length (default: 10.0s)
-  - Eliminates most padding from SAM-Audio model
-  - Only last (remainder) segment gets padded
-- `audio-playground doctor check-durations` diagnostic command
-- Consolidated defaults to single source of truth (`app_config.py`)
-
-### Step 1.1: Create `core/` package structure
-
-- **Create:**
-  ```
-  audio_playground/core/
-    ├── __init__.py
-    ├── wav_converter.py
-    ├── segmenter.py
-    └── merger.py
-  ```
-- **Rationale:** Separate concerns; enable independent testing
-- **Test:** `from audio_playground.core import WavConverter` works
-
-### Step 1.2: Extract `WavConverter` class
-
-- **File:** `audio_playground/core/wav_converter.py`
-- **Responsibility:**
-  - Convert MP4/other → WAV
-  - Load/save audio files via `pydub`
-  - Detect format and choose appropriate conversion method
-- **Key Detail:** **Lazy imports** – import `pydub`, `subprocess`, `shutil` **inside methods**, not at module level
-- **Signature:**
-
-  ```python
-  class WavConverter:
-      @staticmethod
-      def convert_to_wav(src_path: Path, dst_path: Path) -> None:
-          """Convert any audio format to WAV."""
-
-      @staticmethod
-      def load_audio_duration(path: Path) -> float:
-          """Return duration in seconds."""
-  ```
-
-- **Test:** Create unit test for each conversion type (MP4 → WAV, WAV → WAV)
-
-### Step 1.3: Extract `Segmenter` class
-
-- **File:** `audio_playground/core/segmenter.py`
-- **Responsibility:**
-  - Create even-length segments from total duration
-  - Split WAV file into segment files
-  - Track segment metadata (start time, duration)
-  - Save metadata to JSON
-- **Key Detail:** **Lazy imports** – import `pydub` inside methods
-- **Signature:**
-
-  ```python
-  class Segmenter:
-      @staticmethod
-      def create_segments(
-          total_length: float,
-          min_length: float = 9.0,
-          max_length: float = 17.0
-      ) -> list[float]:
-          """Return list of segment lengths."""
-
-      @staticmethod
-      def split_to_files(
-          audio_path: Path,
-          output_dir: Path,
-          segment_lengths: list[float]
-      ) -> tuple[list[Path], list[tuple[float, float]]]:
-          """Split WAV, return segment files and metadata."""
-  ```
-
-- **Test:** Create unit tests for segment calculation (edge cases: very short, very long)
-
-### Step 1.4: Extract `Merger` class
-
-- **File:** `audio_playground/core/merger.py`
-- **Responsibility:**
-  - Load segment files by pattern
-  - Concatenate via numpy/torch
-  - Save to output directory
-  - Extract prompt from filename patterns
-- **Key Detail:** **Lazy imports** – import `torch`, `torchaudio` inside methods
-- **Signature:**
-
-  ```python
-  class Merger:
-      @staticmethod
-      def concatenate_segments(segment_files: list[Path]) -> Tensor:
-          """Load and concatenate audio segments."""
-
-      @staticmethod
-      def find_prompts_from_files(tmp_dir: Path) -> dict[str, list[Path]]:
-          """Scan dir for {segment}-target-{prompt}.wav patterns."""
-
-      @staticmethod
-      def merge_and_save(
-          tmp_dir: Path,
-          output_dir: Path,
-          chain_residuals: bool = True
-      ) -> None:
-          """Merge all segments and save outputs."""
-  ```
-
-- **Test:** Create unit tests for concatenation, pattern matching
-
-### Step 1.5: Refactor Phase 1 to use `WavConverter` + `Segmenter`
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Replace inline logic in `phase_1_segment_and_process()` with:
-
-  ```python
-  # Convert
-  wav_file = tmp_path / "audio.wav"
-  WavConverter.convert_to_wav(src_path, wav_file)
-
-  # Segment
-  total_length = WavConverter.load_audio_duration(wav_file)
-  segment_lengths = Segmenter.create_segments(total_length, ...)
-  segment_files, metadata = Segmenter.split_to_files(wav_file, tmp_path, segment_lengths)
-  ```
-
-- **Test:** Existing `extract sam-audio` tests still pass
-
-### Step 1.6: Refactor Phase 2 to use `Merger`
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Replace inline logic in `phase_2_blend_and_save()` with:
-  ```python
-  Merger.merge_and_save(tmp_path, target_path, config.chain_residuals)
-  ```
-- **Test:** Existing output matches (bit-for-bit if possible, or at least audio quality)
-
-### Step 1.7: Move heavy imports to Phase 1 & 2
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Move `import torch`, `import torchaudio`, `from sam_audio import ...` to **inside** `phase_1_segment_and_process()`
-- **Rationale:** `--help` and `--version` become instant (no torch compile)
-- **Test:** Run `audio-playground --help` and time it (should be <1s)
-
-### Validation Checklist
-
-- [x] `from audio_playground.core import WavConverter, Segmenter, Merger` all work
-- [x] Each class has >=80% unit test coverage
-- [x] `audio-playground extract sam-audio` still produces identical output
-- [x] `--help` runs in <1s (lazy imports verified)
-- [x] `.env` and CLI flags still override correctly
-
-**Exit Criteria:** Phase 1 code passes tests; `--help` is fast
+Implemented lazy imports for torch/torchaudio to make `--help` fast (<1s). Added CLI options: `--sample-rate`, `--max-segments`, `--segment-window-size` (default: 10.0s). Refactored `sam_audio.py` to use core modules with dependency injection for logger. All type checking passes with `--strict`.
 
 ---
 
@@ -248,47 +54,37 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ### Step 2.1: Create `convert` command ✅
 
-- **Status:** ✅ Complete
-- **Files:**
-  - `audio_playground/cli/convert/__init__.py` - convert command group
-  - `audio_playground/cli/convert/to_wav.py` - to-wav subcommand
-  - `audio_playground/cli/common.py` - common option decorators (src_option, target_option, etc.)
-  - `tests/cli/convert/test_to_wav.py` - unit tests
-- **Responsibility:** Convert any audio → WAV
-- **Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
-- **Implementation:**
-  - Wraps `convert_to_wav()` from `core/wav_converter.py`
-  - Uses `click.echo()` for user output (captured by tests)
-  - Uses common option decorators for consistency
-- **Tests:** ✅ All passing (help, missing args, success, group help)
+**Status:** ✅ Complete
+**Files:** `cli/convert/{__init__.py, to_wav.py}`, `cli/common.py`, `tests/cli/convert/test_to_wav.py`
+**Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
+Wraps `convert_to_wav()` from `core/wav_converter.py`. Common option decorators created for consistency across commands.
 
-### Step 2.2: Create `segment` command
+### Step 2.2: Create `segment` command ✅
 
-- **File:** `audio_playground/cli/segment/__init__.py` + `split.py`
-- **Responsibility:** Split WAV into chunks
-- **Usage:** `audio-playground segment split --src input.wav --output-dir ./segments --min 9 --max 17`
-- **Implementation:** Wrap `Segmenter.split_to_files()`, save manifest
-- **Output:** `./segments/segment-000.wav`, `./segments/segment-001.wav`, `./segments/manifest.json`
-- **Test:** Verify segments sum to original length (within tolerance)
+**Status:** ✅ Complete
+**Files:** `cli/segment/{__init__.py, split.py}`, `tests/cli/segment/test_split.py`
+**Usage:** `audio-playground segment split --src input.wav --output-dir ./segments --window-size 10.0`
+Wraps `create_segments()` and `split_to_files()` from `core/segmenter.py`. Outputs segment files and `segment_metadata.json`.
 
-### Step 2.3: Create `merge` command
+### Step 2.3: Create `merge` command ✅
 
-- **File:** `audio_playground/cli/merge/__init__.py` + `concat.py`
-- **Responsibility:** Concatenate segment files
-- **Usage:** `audio-playground merge concat --input-dir ./segments --pattern "segment-*target*.wav" --output result.wav`
-- **Implementation:** Wrap `Merger.concatenate_segments()`
-- **Test:** Verify output matches original (if only converting)
+**Status:** ✅ Complete
+**Files:** `cli/merge/{__init__.py, concat.py}`, `cli/common.py` (pattern_option), `tests/cli/merge/test_concat.py`
+**Usage:** `audio-playground merge concat --input-dir ./segments --pattern "segment-*.wav" --target result.wav`
+Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for flexible file matching. Automatically detects sample rate from first file.
 
 ### Step 2.4a: Create `extract process-sam-audio` command
 
 - **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
 - **Responsibility:** Run SAM-Audio model on segment(s)
 - **Usage Examples:**
-  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
-  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out`
-  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out`
+  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
+  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
+  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out  --suffix sam`
 - **Implementation:**
   - `--segment` accepts multiple values (Click `multiple=True`)
+  - `--suffix` is an optional arg which is either string or bool; if a string, it is appended to the prompt (e.g. bass-a_string.wav); if not passed, the default is used (default is 'sam', i.e. bass-sam.wav); if false, no suffix at all (i.e. bass.wav). Note that currently targets as saved as sam-bass.wav, so this is a change in behaviour.
+  - Suffix should be a decorator, as it is going to be used by every process command (and the default is process specific; i.e. demucs will use demucs as suffix)
   - Expand glob patterns in segment paths
   - Refactor existing model inference logic from Phase 1
   - Batch process all segments with model loaded once
@@ -304,6 +100,247 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Integrates with Demucs library
   - Outputs separated stems to output directory
 - **Test:** Verify produces separated audio stems
+
+### Step 2.4c: PyTorch Performance Optimizations (Platform-Agnostic)
+
+- **File:** `audio_playground/core/sam_audio_optimizer.py` (new)
+- **Responsibility:** Performance optimizations that work on all platforms (Windows, Linux, Mac, CUDA, CPU)
+- **Rationale:** Improve processing speed and memory efficiency without platform-specific dependencies
+- **Implementation:**
+
+  **Text Feature Caching:**
+  ```python
+  class PromptCache:
+      """Cache text embeddings to avoid re-encoding same prompts"""
+      def get_or_encode(self, prompts: list[str], encoder) -> Tensor:
+          # Hash prompts, return cached embeddings if available
+          # Huge win for multi-segment processing with same prompts
+  ```
+
+  **Chunked Processing with Crossfade:**
+  ```python
+  def process_long_audio(
+      audio_path: Path,
+      prompts: list[str],
+      chunk_duration: float = 30.0,
+      overlap_duration: float = 2.0,
+      crossfade_type: str = "cosine"  # or "linear"
+  ) -> dict[str, Tensor]:
+      """
+      Process long audio files in overlapping chunks to reduce peak memory.
+      Blends chunks with cosine/linear crossfade to avoid artifacts.
+      """
+  ```
+
+  **Streaming/Generator Mode:**
+  ```python
+  def process_streaming(
+      audio_path: Path,
+      prompts: list[str],
+      chunk_duration: float = 15.0
+  ) -> Generator[tuple[str, Tensor], None, None]:
+      """
+      Yield results chunk-by-chunk as they're ready.
+      First audio available in ~10-15s instead of waiting for full file.
+      Enables interactive applications and progress monitoring.
+      """
+  ```
+
+  **Configurable ODE Solvers:**
+  ```python
+  class SolverConfig:
+      method: Literal["euler", "midpoint"] = "midpoint"  # euler=faster, midpoint=quality
+      steps: int = 32  # Lower=faster but lower quality
+
+  # Allow users to trade quality for speed:
+  # - Euler + 16 steps: ~2x faster, slight quality loss
+  # - Midpoint + 64 steps: Maximum quality, slower
+  ```
+
+  **Memory Management:**
+  ```python
+  def clear_caches(device: str) -> None:
+      """Explicit cache clearing between chunks/batches"""
+      import torch
+      if device.startswith("cuda"):
+          torch.cuda.empty_cache()
+          torch.cuda.synchronize()
+      # Add memory monitoring and warnings
+  ```
+
+- **Configuration Options:** Add to `app_config.py`:
+  ```python
+  # Performance optimization settings
+  enable_prompt_caching: bool = True
+  chunk_duration: float = 30.0  # For long-form processing
+  chunk_overlap: float = 2.0
+  crossfade_type: Literal["cosine", "linear"] = "cosine"
+  ode_solver: Literal["euler", "midpoint"] = "midpoint"
+  ode_steps: int = 32
+  streaming_mode: bool = False  # Yield chunks as ready
+  ```
+
+- **CLI Integration:** Add options to `extract process-sam-audio`:
+  ```python
+  @click.option("--streaming", is_flag=True, help="Stream results chunk-by-chunk")
+  @click.option("--solver", type=click.Choice(["euler", "midpoint"]), help="ODE solver method")
+  @click.option("--solver-steps", type=int, help="Number of solver steps (lower=faster)")
+  @click.option("--chunk-duration", type=float, help="Chunk size for long audio")
+  ```
+
+- **Expected Performance Gains:**
+  - Text caching: 20-30% speedup for multi-segment processing
+  - Chunked processing: Enables arbitrarily long audio (previously limited by memory)
+  - Streaming: First results in ~10-15s vs full processing time
+  - Euler solver: ~2x faster with minimal quality loss
+  - Memory management: Reduces OOM errors on large files
+
+- **Test:** Benchmark before/after on 2-minute audio file; verify crossfade smoothness; test streaming mode
+
+### Step 2.4d: MLX Backend Integration (Apple Silicon Fast Path)
+
+- **Files:**
+  - `audio_playground/core/backends/mlx_backend.py` (new)
+  - `audio_playground/core/backends/pytorch_backend.py` (new)
+  - `audio_playground/core/backends/__init__.py` (new)
+- **Responsibility:** Optional MLX backend for Mac M1/M2/M3 users (10-50x faster than PyTorch on Apple Silicon)
+- **Rationale:** MLX is optimized for Apple's unified memory architecture; massive speedups on M-series chips
+- **Implementation:**
+
+  **Backend Abstraction:**
+  ```python
+  # audio_playground/core/backends/__init__.py
+  from abc import ABC, abstractmethod
+
+  class AudioBackend(ABC):
+      @abstractmethod
+      def load_model(self, model_name: str, device: str):
+          pass
+
+      @abstractmethod
+      def separate(self, audio_path: Path, prompts: list[str]) -> dict[str, Tensor]:
+          pass
+
+  def get_backend(backend: str = "auto") -> AudioBackend:
+      """
+      Auto-detect best backend:
+      - MLX if on Mac with M1/M2/M3 and mlx-audio installed
+      - PyTorch otherwise
+      """
+      if backend == "auto":
+          if platform.system() == "Darwin" and _has_mlx() and _has_apple_silicon():
+              return MLXBackend()
+          return PyTorchBackend()
+      elif backend == "mlx":
+          return MLXBackend()
+      elif backend == "pytorch":
+          return PyTorchBackend()
+  ```
+
+  **MLX Backend:**
+  ```python
+  # audio_playground/core/backends/mlx_backend.py
+  try:
+      from mlx_audio import SAMAudio as SAMAudioMLX
+      HAS_MLX = True
+  except ImportError:
+      HAS_MLX = False
+
+  class MLXBackend(AudioBackend):
+      def __init__(self):
+          if not HAS_MLX:
+              raise ImportError("mlx-audio not installed. Install with: pip install mlx-audio")
+
+      def load_model(self, model_name: str, device: str):
+          # MLX handles device automatically (uses Metal)
+          self.model = SAMAudioMLX.from_pretrained(model_name)
+
+      def separate(self, audio_path: Path, prompts: list[str]) -> dict[str, Tensor]:
+          # Use MLX's optimized separate_long() for chunked processing
+          return self.model.separate_long(
+              audio_path.as_posix(),  # MLX accepts file paths directly
+              prompts,
+              chunk_duration=30.0,
+              overlap_duration=2.0,
+          )
+
+      def separate_streaming(self, audio_path: Path, prompts: list[str]):
+          # Use MLX's generator-based streaming
+          yield from self.model.separate_streaming(audio_path.as_posix(), prompts)
+  ```
+
+  **PyTorch Backend:**
+  ```python
+  # audio_playground/core/backends/pytorch_backend.py
+  class PyTorchBackend(AudioBackend):
+      def __init__(self):
+          self.model = None
+          self.processor = None
+
+      def load_model(self, model_name: str, device: str):
+          from sam_audio import SAMAudio, SAMAudioProcessor
+          self.model = SAMAudio.from_pretrained(model_name, map_location=device).to(device).eval()
+          self.processor = SAMAudioProcessor.from_pretrained(model_name)
+
+      def separate(self, audio_path: Path, prompts: list[str]) -> dict[str, Tensor]:
+          # Use optimizations from Step 2.4c
+          if hasattr(self, 'optimizer'):
+              return self.optimizer.process_long_audio(audio_path, prompts)
+          # Fallback to standard processing
+          inputs = self.processor(audios=[audio_path.as_posix()], descriptions=prompts)
+          return self.model.separate(inputs)
+  ```
+
+- **Configuration:** Add to `app_config.py`:
+  ```python
+  backend: Literal["auto", "mlx", "pytorch"] = "auto"
+  # auto: Use MLX on Apple Silicon if available, PyTorch otherwise
+  # mlx: Force MLX (will error if not available)
+  # pytorch: Force PyTorch (e.g., for testing consistency)
+  ```
+
+- **CLI Integration:**
+  ```python
+  @click.option("--backend", type=click.Choice(["auto", "mlx", "pytorch"]), default="auto",
+                help="Processing backend (auto=detect best, mlx=Apple Silicon only)")
+  ```
+
+- **Installation Instructions:** Update `README.md`:
+  ```markdown
+  ## Installation
+
+  ### Standard (All Platforms)
+  pip install -e .
+
+  ### Apple Silicon (M1/M2/M3) - Faster Performance
+  pip install -e .
+  pip install mlx-audio  # Optional: 10-50x speedup on Mac
+  ```
+
+- **Performance Comparison Table:**
+  ```
+  Platform          | Backend  | 2min Audio | Speedup
+  ------------------|----------|------------|--------
+  Mac M1/M2/M3      | PyTorch  | ~360s      | 1x
+  Mac M1/M2/M3      | MLX      | ~100s      | 3.6x
+  Mac M1/M2/M3 Fast | MLX+Euler| ~60s       | 6x
+  Linux/Windows GPU | PyTorch  | ~200s      | 1.8x
+  CPU               | PyTorch  | ~600s      | 0.6x
+  ```
+
+- **Fallback Behavior:** If MLX fails (e.g., older Mac, missing dependency), automatically fall back to PyTorch with warning
+- **Test:**
+  - Verify auto-detection on Mac with/without mlx-audio
+  - Verify forced backend selection works
+  - Verify fallback on import error
+  - Benchmark MLX vs PyTorch on Apple Silicon (if available)
+  - Ensure identical output quality between backends
+
+- **Documentation:** Add `docs/BACKENDS.md` explaining:
+  - When to use each backend
+  - Installation instructions
+  - Performance characteristics
+  - Troubleshooting common issues
 
 ### Step 2.5a: Make `extract sam-audio` a composite command
 
@@ -358,23 +395,32 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.1:** `audio-playground convert to-wav --help` works
 - [x] **Step 2.1:** Convert command tests pass
 - [x] **Step 2.1:** Common option decorators created
-- [ ] **Step 2.2:** `audio-playground segment split --help` works
-- [ ] **Step 2.2:** Segment command produces valid output
-- [ ] **Step 2.3:** `audio-playground merge concat --help` works
-- [ ] **Step 2.3:** Merge command reconstructs audio correctly
+- [x] **Step 2.2:** `audio-playground segment split --help` works
+- [x] **Step 2.2:** Segment command produces valid output
+- [x] **Step 2.3:** `audio-playground merge concat --help` works
+- [x] **Step 2.3:** Merge command reconstructs audio correctly
 - [ ] **Step 2.4a:** `audio-playground extract process-sam-audio --help` works
 - [ ] **Step 2.4a:** Process command handles single/multiple/glob segments
 - [ ] **Step 2.4b:** `audio-playground extract process-demucs --help` works
 - [ ] **Step 2.4b:** Demucs integration produces separated stems
+- [ ] **Step 2.4c:** PyTorch optimizations implemented (caching, chunking, streaming)
+- [ ] **Step 2.4c:** Benchmark shows expected performance gains
+- [ ] **Step 2.4c:** Crossfade blending produces smooth audio (no artifacts)
+- [ ] **Step 2.4d:** MLX backend auto-detection works on Apple Silicon
+- [ ] **Step 2.4d:** Backend abstraction allows switching PyTorch ↔ MLX
+- [ ] **Step 2.4d:** Fallback to PyTorch on missing MLX dependency
 - [ ] **Step 2.5a:** `extract sam-audio` composite produces same output as current implementation
 - [ ] **Step 2.5b:** `extract demucs` composite works end-to-end
 - [ ] **Step 2.6:** Global config options applied to all commands
 
-**Exit Criteria:** All atomic commands functional; both composite commands work; common options standardized
+**Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
+
+**Next Step:** Implement Step 2.4a (process-sam-audio command)
 
 ### Additional Improvements (Phase 2)
 
 **CI/CD Enhancements:**
+
 - ✅ GitHub Actions workflow for automated QA checks
   - Runs `task qa` on all pushes and PRs
   - Blocks PR merge if QA fails
@@ -389,6 +435,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Runs even on test failures
 
 **Files Added:**
+
 - `.github/workflows/qa.yml` - CI/CD workflow
 - `.github/COVERAGE_BADGE.md` - Badge usage documentation
 
@@ -724,7 +771,7 @@ Week 5:
 
 - [x] `audio-playground --help` runs in <1s
 - [x] `audio-playground extract sam-audio` still works (regression test passes)
-- [ ] >=95% unit test coverage
+- [ ] > =95% unit test coverage
 - [ ] All atomic commands functional
 - [ ] Caching provides measurable speedup (2nd run >=10x faster for segment step)
 - [ ] YAML workflows execute end-to-end
