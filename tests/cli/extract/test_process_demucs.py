@@ -76,6 +76,7 @@ def test_process_demucs_basic(
         assert kwargs["model_name"] == "htdemucs_ft"  # default
         assert kwargs["shifts"] == 6  # default
         assert kwargs["num_workers"] == 4  # default
+        assert kwargs["show_progress"] is True  # default
 
 
 def test_process_demucs_custom_model(
@@ -233,3 +234,63 @@ def test_process_demucs_nonexistent_file(
 
     # Click validates path exists, so this should fail
     assert result.exit_code != 0
+
+
+def test_process_demucs_progress_flag(
+    cli_runner: CliRunner,
+    cli_env: None,
+    tmp_path: Path,
+) -> None:
+    """Test process-demucs with progress flag"""
+    audio_file = tmp_path / "audio.wav"
+    audio_file.write_text("dummy audio data")
+
+    output_dir = tmp_path / "output"
+
+    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+        result = cli_runner.invoke(
+            cli,
+            [
+                "extract",
+                "process-demucs",
+                "--src",
+                str(audio_file),
+                "--output-dir",
+                str(output_dir),
+                "--progress",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_process.call_args[1]
+        assert kwargs["show_progress"] is True
+
+
+def test_process_demucs_no_progress_flag(
+    cli_runner: CliRunner,
+    cli_env: None,
+    tmp_path: Path,
+) -> None:
+    """Test process-demucs with --no-progress flag"""
+    audio_file = tmp_path / "audio.wav"
+    audio_file.write_text("dummy audio data")
+
+    output_dir = tmp_path / "output"
+
+    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+        result = cli_runner.invoke(
+            cli,
+            [
+                "extract",
+                "process-demucs",
+                "--src",
+                str(audio_file),
+                "--output-dir",
+                str(output_dir),
+                "--no-progress",
+            ],
+        )
+
+        assert result.exit_code == 0
+        kwargs = mock_process.call_args[1]
+        assert kwargs["show_progress"] is False

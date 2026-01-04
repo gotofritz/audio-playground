@@ -68,6 +68,10 @@ class AudioPlaygroundConfig(BaseSettings):
         default=4,
         description="Number of worker threads for Demucs processing",
     )
+    demucs_progress: bool = Field(
+        default=True,
+        description="Show progress bar during Demucs processing",
+    )
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

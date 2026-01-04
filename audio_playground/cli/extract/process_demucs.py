@@ -18,6 +18,7 @@ def process_audio_with_demucs(
     shifts: int,
     num_workers: int,
     logger: logging.Logger,
+    show_progress: bool = True,
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -30,6 +31,7 @@ def process_audio_with_demucs(
         shifts: Number of random shifts for equivariant stabilization
         num_workers: Number of worker threads
         logger: Logger instance
+        show_progress: Show progress bar during processing
     """
     # Lazy imports for performance
     import torch
@@ -82,7 +84,7 @@ def process_audio_with_demucs(
             shifts=shifts,
             split=True,
             overlap=0.25,
-            progress=False,
+            progress=show_progress,
         )[0]  # Remove batch dimension
 
     # Save stems
@@ -138,6 +140,11 @@ def process_audio_with_demucs(
     default=None,
     help="Number of worker threads. If not specified, uses config default.",
 )
+@click.option(
+    "--progress/--no-progress",
+    default=None,
+    help="Show progress bar during processing. If not specified, uses config default.",
+)
 @click.pass_context
 def process_demucs(
     ctx: click.Context,
@@ -147,6 +154,7 @@ def process_demucs(
     device: str | None,
     shifts: int | None,
     num_workers: int | None,
+    progress: bool | None,
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -176,6 +184,12 @@ def process_demucs(
             --src audio.wav \\
             --output-dir ./stems \\
             --shifts 10
+
+        # Disable progress bar for scripting
+        audio-playground extract process-demucs \\
+            --src audio.wav \\
+            --output-dir ./stems \\
+            --no-progress
     """
     try:
         app_context: AppContext = ctx.obj
@@ -187,6 +201,7 @@ def process_demucs(
         device_value = device if device is not None else config.device
         shifts_value = shifts if shifts is not None else config.demucs_shifts
         num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
+        show_progress = progress if progress is not None else config.demucs_progress
 
         # Determine device
         if device_value == "auto":
@@ -206,6 +221,7 @@ def process_demucs(
         logger.info(f"Model: {model_name}")
         logger.info(f"Shifts: {shifts_value}")
         logger.info(f"Workers: {num_workers_value}")
+        logger.info(f"Progress bar: {'enabled' if show_progress else 'disabled'}")
 
         # Process audio
         process_audio_with_demucs(
@@ -216,6 +232,7 @@ def process_demucs(
             shifts=shifts_value,
             num_workers=num_workers_value,
             logger=logger,
+            show_progress=show_progress,
         )
 
         logger.info("All done!")
