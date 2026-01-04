@@ -53,7 +53,9 @@ def test_process_demucs_basic(
     output_dir = tmp_path / "output"
 
     # Mock the processing function
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [
@@ -90,7 +92,9 @@ def test_process_demucs_custom_model(
 
     output_dir = tmp_path / "output"
 
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [
@@ -121,7 +125,9 @@ def test_process_demucs_custom_shifts(
 
     output_dir = tmp_path / "output"
 
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [
@@ -157,7 +163,9 @@ def test_process_demucs_device_auto(
     mock_accelerator.type = "cuda"
 
     with (
-        patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process,
+        patch(
+            "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+        ) as mock_process,
         patch("torch.accelerator.is_available", return_value=True),
         patch("torch.accelerator.current_accelerator", return_value=mock_accelerator),
     ):
@@ -191,7 +199,9 @@ def test_process_demucs_device_explicit(
 
     output_dir = tmp_path / "output"
 
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [
@@ -247,7 +257,9 @@ def test_process_demucs_progress_flag(
 
     output_dir = tmp_path / "output"
 
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [
@@ -277,7 +289,9 @@ def test_process_demucs_no_progress_flag(
 
     output_dir = tmp_path / "output"
 
-    with patch("audio_playground.cli.extract.process_demucs.process_audio_with_demucs") as mock_process:
+    with patch(
+        "audio_playground.cli.extract.process_demucs.process_audio_with_demucs"
+    ) as mock_process:
         result = cli_runner.invoke(
             cli,
             [

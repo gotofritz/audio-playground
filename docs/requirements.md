@@ -103,7 +103,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
 - **Test:** Verify separated stems are produced
 
-### Step 3: Move to an src layout
+### Step 3: Restructuring code
 
 - change the code to this layout
   ```bash
@@ -121,6 +121,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   [tool.setuptools.packages.find]
   where = ["src"]
   ```
+- Replace mypy with ty <https://docs.astral.sh/ty/>
 
 ## ⏳ Phase 4: PyTorch Performance Optimizations (Platform-Agnostic)
 
