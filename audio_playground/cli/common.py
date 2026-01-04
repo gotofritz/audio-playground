@@ -148,3 +148,33 @@ def pattern_option(
         required=required,
         help=help_text,
     )
+
+
+def suffix_option(default_suffix: str = "sam") -> Callable[[F], F]:
+    """
+    Decorator for --suffix option used in processing commands.
+
+    The suffix is appended to output filenames (e.g., "bass-sam.wav").
+
+    Args:
+        default_suffix: Default suffix if not specified (e.g., "sam", "demucs")
+
+    Returns:
+        Click option decorator
+
+    Usage:
+        - Not provided: Uses default suffix (e.g., "sam" → "bass-sam.wav")
+        - String value: Uses custom suffix (e.g., "my" → "bass-my.wav")
+        - False/"": No suffix (e.g., "bass.wav")
+
+    Examples:
+        --suffix my          → "bass-my.wav"
+        (not provided)       → "bass-sam.wav" (default)
+        --suffix ""          → "bass.wav" (no suffix)
+    """
+    return click.option(
+        "--suffix",
+        type=str,
+        default=default_suffix,
+        help=f"Suffix for output files. Default: '{default_suffix}'. Use empty string for no suffix.",
+    )
