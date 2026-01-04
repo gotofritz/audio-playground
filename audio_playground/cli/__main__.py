@@ -19,6 +19,7 @@ from audio_playground.app_context import AppContext
 from audio_playground.cli.convert import convert
 from audio_playground.cli.doctor import doctor
 from audio_playground.cli.extract import extract
+from audio_playground.cli.segment import segment
 
 CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], default_map={"obj": {}})
 
@@ -43,6 +44,7 @@ def cli(ctx: click.Context) -> None:
 cli.add_command(convert)
 cli.add_command(doctor)
 cli.add_command(extract)
+cli.add_command(segment)
 
 
 if __name__ == "__main__":

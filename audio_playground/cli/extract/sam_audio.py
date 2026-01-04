@@ -6,6 +6,12 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
+from audio_playground.cli.common import (
+    max_segments_option,
+    output_dir_option,
+    src_option,
+    window_size_option,
+)
 from audio_playground.config.app_config import AudioPlaygroundConfig, Model
 from audio_playground.core import segmenter, wav_converter
 
@@ -39,7 +45,7 @@ def batch_items(items: list[str], batch_size: int) -> list[list[str]]:
 def phase_1_segment_and_process(
     config: AudioPlaygroundConfig,
     logger: logging.Logger,
-    src: str | None,
+    src: Path | None,
     prompts: tuple[str, ...],
 ) -> Path:
     """
@@ -249,7 +255,7 @@ def phase_2_blend_and_save(
     config: AudioPlaygroundConfig,
     logger: logging.Logger,
     tmp_path: Path,
-    target: str | None,
+    output_dir: Path | None,
 ) -> None:
     """
     Phase 2: Blend segments and save final output files.
@@ -261,23 +267,15 @@ def phase_2_blend_and_save(
 
     logger.info("=== PHASE 2: Concatenation and Final Output ===")
 
-    target_path = Path(target).expanduser() if target else config.target_dir
+    target_path = output_dir.expanduser() if output_dir else config.target_dir
 
     # Use merger to handle all merging logic
     merger.merge_and_save(tmp_path, target_path, logger, config.chain_residuals, config.sample_rate)
 
 
 @click.command(name="test-run3")
-@click.option(
-    "--src",
-    type=click.Path(exists=True),
-    help="Source audio file (MP4 or WAV). Overrides config.",
-)
-@click.option(
-    "--target",
-    type=click.Path(),
-    help="Target output directory. Overrides config.",
-)
+@src_option(required=False, help_text="Source audio file (MP4 or WAV). Overrides config.")
+@output_dir_option(required=False, help_text="Target output directory. Overrides config.")
 @click.option(
     "--prompts",
     multiple=True,
@@ -304,28 +302,20 @@ def phase_2_blend_and_save(
     type=int,
     help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
 )
-@click.option(
-    "--max-segments",
-    type=int,
-    help="Maximum number of segments to create (useful for testing). If not specified, uses calculated number.",
-)
-@click.option(
-    "--segment-window-size",
-    type=float,
-    help="Fixed segment length in seconds. All segments except the last will be this size. If not specified, uses config default.",
-)
+@max_segments_option()
+@window_size_option()
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
-    src: str | None,
-    target: str | None,
+    src: Path | None,
+    output_dir: Path | None,
     prompts: tuple[str, ...],
     continue_from: str | None,
     model: Model = Model.LARGE,
     chain_residuals: bool | None = None,
     sample_rate: int | None = None,
     max_segments: int | None = None,
-    segment_window_size: float | None = None,
+    window_size: float | None = None,
 ) -> None:
     """
     Separate audio sources using SAM-Audio with two-phase processing.
@@ -340,9 +330,9 @@ def sam_audio(
 
         # Override config with CLI arguments if provided
         if src:
-            config.source_file = Path(src)
-        if target:
-            config.target_dir = Path(target).expanduser()
+            config.source_file = src
+        if output_dir:
+            config.target_dir = output_dir.expanduser()
         if prompts:
             config.prompts = list(prompts)
         if chain_residuals is not None:
@@ -351,8 +341,8 @@ def sam_audio(
             config.sample_rate = sample_rate
         if max_segments is not None:
             config.max_segments = max_segments
-        if segment_window_size is not None:
-            config.segment_window_size = segment_window_size
+        if window_size is not None:
+            config.segment_window_size = window_size
 
         # Log final configuration
         logger.info("Starting...")
@@ -373,7 +363,7 @@ def sam_audio(
             tmp_path = phase_1_segment_and_process(config, logger, src, prompts)
 
         # Phase 2: Blend and save (always runs)
-        phase_2_blend_and_save(config, logger, tmp_path, target)
+        phase_2_blend_and_save(config, logger, tmp_path, output_dir)
 
         logger.info("All done")
 
