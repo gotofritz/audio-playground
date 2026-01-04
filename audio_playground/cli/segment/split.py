@@ -5,7 +5,12 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
-from audio_playground.cli.common import output_dir_option, src_option
+from audio_playground.cli.common import (
+    max_segments_option,
+    output_dir_option,
+    src_option,
+    window_size_option,
+)
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import load_audio_duration
 
@@ -13,18 +18,8 @@ from audio_playground.core.wav_converter import load_audio_duration
 @click.command()
 @src_option(help_text="Source WAV file to split")
 @output_dir_option(help_text="Output directory for segment files")
-@click.option(
-    "--window-size",
-    type=float,
-    default=10.0,
-    help="Segment length in seconds (default: 10.0)",
-)
-@click.option(
-    "--max-segments",
-    type=int,
-    default=None,
-    help="Maximum number of segments (for testing)",
-)
+@window_size_option()
+@max_segments_option()
 @click.pass_obj
 def split(
     app_context: AppContext,

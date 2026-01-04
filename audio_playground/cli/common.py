@@ -88,3 +88,36 @@ def input_dir_option(
         required=required,
         help=help_text,
     )
+
+
+def window_size_option(default: float = 10.0) -> Callable[[F], F]:
+    """
+    Decorator for --window-size option.
+
+    Args:
+        default: Default window size in seconds
+
+    Returns:
+        Click option decorator
+    """
+    return click.option(
+        "--window-size",
+        type=float,
+        default=default,
+        help=f"Segment length in seconds (default: {default})",
+    )
+
+
+def max_segments_option() -> Callable[[F], F]:
+    """
+    Decorator for --max-segments option.
+
+    Returns:
+        Click option decorator
+    """
+    return click.option(
+        "--max-segments",
+        type=int,
+        default=None,
+        help="Maximum number of segments (for testing)",
+    )
