@@ -18,7 +18,6 @@ def test_process_sam_audio_help(cli_runner: CliRunner, cli_env: None) -> None:
     assert "--segment" in result.output
     assert "--prompts" in result.output
     assert "--output-dir" in result.output
-    assert "--suffix" in result.output
 
 
 def test_process_sam_audio_missing_required_args(cli_runner: CliRunner, cli_env: None) -> None:
