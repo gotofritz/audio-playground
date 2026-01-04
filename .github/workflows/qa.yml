@@ -39,11 +39,10 @@ jobs:
           # Install other dependencies
           pip install pydub click rich pydantic pydantic-settings
 
-          # Install all dev dependencies from pyproject.toml
-          pip install copier commitizen faker polyfactory pre-commit pytest pytest-cov pytest-datadir pytest-env ruff safety ty
-
-          # Install the package in editable mode (without sam-audio dependency for CI)
+          # Install the package in editable mode with dev dependencies
+          # Use --no-deps to skip sam-audio dependency (not needed for CI)
           pip install -e . --no-deps
+          pip install -e .[dev]
 
       - name: Install Task
         shell: bash -el {0}
