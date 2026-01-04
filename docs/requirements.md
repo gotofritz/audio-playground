@@ -12,230 +12,35 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Step 2.1 Complete
+**Current Phase:** Phase 2 In Progress | Steps 2.1-2.3 Complete
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Step 2.1 complete)
+- 🚧 Phase 2: In Progress (Steps 2.1-2.3 complete)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
 
 ---
 
-## ✅ Phase 0: Add `--chain-residuals` Flag (Immediate)
+## ✅ Phase 0: Add `--chain-residuals` Flag
 
-### Goal
+**Status:** ✅ Complete
 
-Enable the existing residual-chaining logic conditionally before refactoring.
-
-### Step 0.1: Add config option
-
-- **File:** `audio_playground/config/app_config.py`
-- **Change:** Add field `chain_residuals: bool = True` to `AudioPlaygroundConfig`
-- **Rationale:** Defaults to `True` (current behavior) for backward compatibility
-- **Test:** Verify field loads from `.env` and CLI override works
-
-### Step 0.2: Update `sam_audio.py` to respect flag
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Wrap Phase 1's "residual chaining" block with condition:
-  ```python
-  if config.chain_residuals and len(prompts_list) > 1:
-      # existing chaining logic
-  ```
-- **Rationale:** Allows users to skip cumulative residual computation
-- **Test:** Run with flag on/off, verify output files match expectations
-
-### Step 0.3: Add CLI flag to command
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Add `@click.option("--chain-residuals/--no-chain-residuals", default=True, ...)`
-- **Test:** Verify `audio-playground extract sam-audio --help` shows the flag
-
-### Validation Checklist
-
-- [x] `audio-playground extract sam-audio --help` shows `--chain-residuals` flag
-- [x] Running with `--no-chain-residuals` produces only `sam-{prompt}.wav` files (no `sam-other.wav`)
-- [x] Running without flag produces current output (backward compatible)
-- [x] `.env` can override via `CHAIN_RESIDUALS=false`
-
-**Exit Criteria:** Existing tests pass + new flag functional
+Added conditional residual-chaining logic with `--chain-residuals` flag to `AudioPlaygroundConfig`. Flag controls whether cumulative residual (`sam-other.wav`) is computed when multiple prompts are used. Defaults to `False` for cleaner output.
 
 ---
 
 ## ✅ Phase 1: Modularization & Lazy Imports
 
-### Goal
+**Status:** ✅ Complete
 
-Extract reusable components into a `core/` package with lazy imports for speed.
+Created `core/` package with modular functions:
+- `wav_converter.py` - audio format conversion and duration loading
+- `segmenter.py` - fixed-window audio segmentation
+- `merger.py` - segment concatenation with prompt-based file matching
 
-### Implementation Summary
-
-**Completed Changes:**
-- Created `core/` package with plain functions (not classes):
-  - `wav_converter.py` - audio format conversion
-  - `segmenter.py` - audio segmentation with fixed window size
-  - `merger.py` - segment concatenation and merging
-- Implemented lazy imports (torch/torchaudio/sam_audio only)
-- Refactored `sam_audio.py` to use core modules
-- Logger passed from app_context (dependency injection pattern)
-- Restored prompt batching functionality
-- Fixed duplicate logging issue (logger.propagate = False)
-- All type checking passes with `--strict`
-
-**Additional Features:**
-- `--sample-rate` CLI option to resample outputs
-- `--max-segments` to cap number of segments (for testing)
-- `--segment-window-size` to set fixed segment length (default: 10.0s)
-  - Eliminates most padding from SAM-Audio model
-  - Only last (remainder) segment gets padded
-- `audio-playground doctor check-durations` diagnostic command
-- Consolidated defaults to single source of truth (`app_config.py`)
-
-### Step 1.1: Create `core/` package structure
-
-- **Create:**
-  ```
-  audio_playground/core/
-    ├── __init__.py
-    ├── wav_converter.py
-    ├── segmenter.py
-    └── merger.py
-  ```
-- **Rationale:** Separate concerns; enable independent testing
-- **Test:** `from audio_playground.core import WavConverter` works
-
-### Step 1.2: Extract `WavConverter` class
-
-- **File:** `audio_playground/core/wav_converter.py`
-- **Responsibility:**
-  - Convert MP4/other → WAV
-  - Load/save audio files via `pydub`
-  - Detect format and choose appropriate conversion method
-- **Key Detail:** **Lazy imports** – import `pydub`, `subprocess`, `shutil` **inside methods**, not at module level
-- **Signature:**
-
-  ```python
-  class WavConverter:
-      @staticmethod
-      def convert_to_wav(src_path: Path, dst_path: Path) -> None:
-          """Convert any audio format to WAV."""
-
-      @staticmethod
-      def load_audio_duration(path: Path) -> float:
-          """Return duration in seconds."""
-  ```
-
-- **Test:** Create unit test for each conversion type (MP4 → WAV, WAV → WAV)
-
-### Step 1.3: Extract `Segmenter` class
-
-- **File:** `audio_playground/core/segmenter.py`
-- **Responsibility:**
-  - Create even-length segments from total duration
-  - Split WAV file into segment files
-  - Track segment metadata (start time, duration)
-  - Save metadata to JSON
-- **Key Detail:** **Lazy imports** – import `pydub` inside methods
-- **Signature:**
-
-  ```python
-  class Segmenter:
-      @staticmethod
-      def create_segments(
-          total_length: float,
-          min_length: float = 9.0,
-          max_length: float = 17.0
-      ) -> list[float]:
-          """Return list of segment lengths."""
-
-      @staticmethod
-      def split_to_files(
-          audio_path: Path,
-          output_dir: Path,
-          segment_lengths: list[float]
-      ) -> tuple[list[Path], list[tuple[float, float]]]:
-          """Split WAV, return segment files and metadata."""
-  ```
-
-- **Test:** Create unit tests for segment calculation (edge cases: very short, very long)
-
-### Step 1.4: Extract `Merger` class
-
-- **File:** `audio_playground/core/merger.py`
-- **Responsibility:**
-  - Load segment files by pattern
-  - Concatenate via numpy/torch
-  - Save to output directory
-  - Extract prompt from filename patterns
-- **Key Detail:** **Lazy imports** – import `torch`, `torchaudio` inside methods
-- **Signature:**
-
-  ```python
-  class Merger:
-      @staticmethod
-      def concatenate_segments(segment_files: list[Path]) -> Tensor:
-          """Load and concatenate audio segments."""
-
-      @staticmethod
-      def find_prompts_from_files(tmp_dir: Path) -> dict[str, list[Path]]:
-          """Scan dir for {segment}-target-{prompt}.wav patterns."""
-
-      @staticmethod
-      def merge_and_save(
-          tmp_dir: Path,
-          output_dir: Path,
-          chain_residuals: bool = True
-      ) -> None:
-          """Merge all segments and save outputs."""
-  ```
-
-- **Test:** Create unit tests for concatenation, pattern matching
-
-### Step 1.5: Refactor Phase 1 to use `WavConverter` + `Segmenter`
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Replace inline logic in `phase_1_segment_and_process()` with:
-
-  ```python
-  # Convert
-  wav_file = tmp_path / "audio.wav"
-  WavConverter.convert_to_wav(src_path, wav_file)
-
-  # Segment
-  total_length = WavConverter.load_audio_duration(wav_file)
-  segment_lengths = Segmenter.create_segments(total_length, ...)
-  segment_files, metadata = Segmenter.split_to_files(wav_file, tmp_path, segment_lengths)
-  ```
-
-- **Test:** Existing `extract sam-audio` tests still pass
-
-### Step 1.6: Refactor Phase 2 to use `Merger`
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Replace inline logic in `phase_2_blend_and_save()` with:
-  ```python
-  Merger.merge_and_save(tmp_path, target_path, config.chain_residuals)
-  ```
-- **Test:** Existing output matches (bit-for-bit if possible, or at least audio quality)
-
-### Step 1.7: Move heavy imports to Phase 1 & 2
-
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Move `import torch`, `import torchaudio`, `from sam_audio import ...` to **inside** `phase_1_segment_and_process()`
-- **Rationale:** `--help` and `--version` become instant (no torch compile)
-- **Test:** Run `audio-playground --help` and time it (should be <1s)
-
-### Validation Checklist
-
-- [x] `from audio_playground.core import WavConverter, Segmenter, Merger` all work
-- [x] Each class has >=80% unit test coverage
-- [x] `audio-playground extract sam-audio` still produces identical output
-- [x] `--help` runs in <1s (lazy imports verified)
-- [x] `.env` and CLI flags still override correctly
-
-**Exit Criteria:** Phase 1 code passes tests; `--help` is fast
+Implemented lazy imports for torch/torchaudio to make `--help` fast (<1s). Added CLI options: `--sample-rate`, `--max-segments`, `--segment-window-size` (default: 10.0s). Refactored `sam_audio.py` to use core modules with dependency injection for logger. All type checking passes with `--strict`.
 
 ---
 
@@ -248,36 +53,24 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ### Step 2.1: Create `convert` command ✅
 
-- **Status:** ✅ Complete
-- **Files:**
-  - `audio_playground/cli/convert/__init__.py` - convert command group
-  - `audio_playground/cli/convert/to_wav.py` - to-wav subcommand
-  - `audio_playground/cli/common.py` - common option decorators (src_option, target_option, etc.)
-  - `tests/cli/convert/test_to_wav.py` - unit tests
-- **Responsibility:** Convert any audio → WAV
-- **Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
-- **Implementation:**
-  - Wraps `convert_to_wav()` from `core/wav_converter.py`
-  - Uses `click.echo()` for user output (captured by tests)
-  - Uses common option decorators for consistency
-- **Tests:** ✅ All passing (help, missing args, success, group help)
+**Status:** ✅ Complete
+**Files:** `cli/convert/{__init__.py, to_wav.py}`, `cli/common.py`, `tests/cli/convert/test_to_wav.py`
+**Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
+Wraps `convert_to_wav()` from `core/wav_converter.py`. Common option decorators created for consistency across commands.
 
-### Step 2.2: Create `segment` command
+### Step 2.2: Create `segment` command ✅
 
-- **File:** `audio_playground/cli/segment/__init__.py` + `split.py`
-- **Responsibility:** Split WAV into chunks
-- **Usage:** `audio-playground segment split --src input.wav --output-dir ./segments --min 9 --max 17`
-- **Implementation:** Wrap `Segmenter.split_to_files()`, save manifest
-- **Output:** `./segments/segment-000.wav`, `./segments/segment-001.wav`, `./segments/manifest.json`
-- **Test:** Verify segments sum to original length (within tolerance)
+**Status:** ✅ Complete
+**Files:** `cli/segment/{__init__.py, split.py}`, `tests/cli/segment/test_split.py`
+**Usage:** `audio-playground segment split --src input.wav --output-dir ./segments --window-size 10.0`
+Wraps `create_segments()` and `split_to_files()` from `core/segmenter.py`. Outputs segment files and `segment_metadata.json`.
 
-### Step 2.3: Create `merge` command
+### Step 2.3: Create `merge` command ✅
 
-- **File:** `audio_playground/cli/merge/__init__.py` + `concat.py`
-- **Responsibility:** Concatenate segment files
-- **Usage:** `audio-playground merge concat --input-dir ./segments --pattern "segment-*target*.wav" --output result.wav`
-- **Implementation:** Wrap `Merger.concatenate_segments()`
-- **Test:** Verify output matches original (if only converting)
+**Status:** ✅ Complete
+**Files:** `cli/merge/{__init__.py, concat.py}`, `cli/common.py` (pattern_option), `tests/cli/merge/test_concat.py`
+**Usage:** `audio-playground merge concat --input-dir ./segments --pattern "segment-*.wav" --target result.wav`
+Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for flexible file matching. Automatically detects sample rate from first file.
 
 ### Step 2.4a: Create `extract process-sam-audio` command
 
@@ -358,10 +151,10 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.1:** `audio-playground convert to-wav --help` works
 - [x] **Step 2.1:** Convert command tests pass
 - [x] **Step 2.1:** Common option decorators created
-- [ ] **Step 2.2:** `audio-playground segment split --help` works
-- [ ] **Step 2.2:** Segment command produces valid output
-- [ ] **Step 2.3:** `audio-playground merge concat --help` works
-- [ ] **Step 2.3:** Merge command reconstructs audio correctly
+- [x] **Step 2.2:** `audio-playground segment split --help` works
+- [x] **Step 2.2:** Segment command produces valid output
+- [x] **Step 2.3:** `audio-playground merge concat --help` works
+- [x] **Step 2.3:** Merge command reconstructs audio correctly
 - [ ] **Step 2.4a:** `audio-playground extract process-sam-audio --help` works
 - [ ] **Step 2.4a:** Process command handles single/multiple/glob segments
 - [ ] **Step 2.4b:** `audio-playground extract process-demucs --help` works
@@ -371,6 +164,8 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [ ] **Step 2.6:** Global config options applied to all commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; common options standardized
+
+**Next Step:** Implement Step 2.4a (process-sam-audio command)
 
 ### Additional Improvements (Phase 2)
 

@@ -125,3 +125,26 @@ def max_segments_option() -> Callable[[F], F]:
         default=None,
         help="Maximum number of segments (for testing)",
     )
+
+
+def pattern_option(
+    required: bool = True, default: str | None = None, help_text: str = "File pattern to match"
+) -> Callable[[F], F]:
+    """
+    Decorator for --pattern option.
+
+    Args:
+        required: Whether the option is required
+        default: Default pattern if not specified
+        help_text: Help text for the option
+
+    Returns:
+        Click option decorator
+    """
+    return click.option(
+        "--pattern",
+        type=str,
+        default=default,
+        required=required,
+        help=help_text,
+    )
