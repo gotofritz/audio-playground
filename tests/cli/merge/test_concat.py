@@ -1,7 +1,7 @@
 """Tests for the merge concat command."""
 
 from pathlib import Path
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import torch
 from click.testing import CliRunner
@@ -78,13 +78,11 @@ def test_merge_concat_success(
     mock_tensor = torch.zeros(2, 1000)  # Dummy audio tensor
     with (
         patch("audio_playground.cli.merge.concat.concatenate_segments") as mock_concat,
-        patch("audio_playground.cli.merge.concat.torchaudio") as mock_torchaudio,
+        patch("torchaudio.load") as mock_load,
+        patch("torchaudio.save") as mock_save,
     ):
         mock_concat.return_value = mock_tensor
-        mock_load = MagicMock(return_value=(mock_tensor, 44100))
-        mock_torchaudio.load = mock_load
-        mock_save = MagicMock()
-        mock_torchaudio.save = mock_save
+        mock_load.return_value = (mock_tensor, 44100)
 
         result = cli_runner.invoke(
             cli,
@@ -143,11 +141,11 @@ def test_merge_concat_custom_pattern(
     mock_tensor = torch.zeros(2, 1000)
     with (
         patch("audio_playground.cli.merge.concat.concatenate_segments") as mock_concat,
-        patch("audio_playground.cli.merge.concat.torchaudio") as mock_torchaudio,
+        patch("torchaudio.load") as mock_load,
+        patch("torchaudio.save") as mock_save,
     ):
         mock_concat.return_value = mock_tensor
-        mock_torchaudio.load.return_value = (mock_tensor, 44100)
-        mock_torchaudio.save = MagicMock()
+        mock_load.return_value = (mock_tensor, 44100)
 
         result = cli_runner.invoke(
             cli,
