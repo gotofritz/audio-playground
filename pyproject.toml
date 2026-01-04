@@ -24,7 +24,7 @@ omit = [
 ]
 
 [tool.ty] # https://docs.astral.sh/ty/
-exclude = ["build/"]
+src = ["src"]
 
 [tool.pytest.ini_options] # https://docs.pytest.org/en/latest/reference/reference.html#ini-options-ref
 testpaths = [
