@@ -45,7 +45,7 @@ def batch_items(items: list[str], batch_size: int) -> list[list[str]]:
 def phase_1_segment_and_process(
     config: AudioPlaygroundConfig,
     logger: logging.Logger,
-    src: str | None,
+    src: Path | None,
     prompts: tuple[str, ...],
 ) -> Path:
     """
@@ -303,7 +303,7 @@ def phase_2_blend_and_save(
     help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
 )
 @max_segments_option()
-@window_size_option(default=None)
+@window_size_option()
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
