@@ -83,6 +83,7 @@ def process_segments_with_sam_audio(
     logger: logging.Logger,
     predict_spans: int,
     reranking_candidates: int,
+    show_progress: bool = True,
 ) -> None:
     """
     Process audio segments with SAM-Audio model.
@@ -97,6 +98,7 @@ def process_segments_with_sam_audio(
         logger: Logger instance
         predict_spans: Number of spans to predict
         reranking_candidates: Number of reranking candidates
+        show_progress: Show progress bar during processing
     """
     # Lazy imports for performance
     import torch
@@ -121,8 +123,22 @@ def process_segments_with_sam_audio(
     # Ensure output directory exists
     output_dir.mkdir(parents=True, exist_ok=True)
 
+    # Import tqdm for progress bar
+    from tqdm import tqdm
+
     # Process each segment
     with torch.inference_mode():
+        # Calculate total batches for progress bar
+        total_batches = sum(len(batch_items(prompts, batch_size)) for _ in segment_files)
+
+        # Create progress bar if enabled
+        pbar = tqdm(
+            total=total_batches,
+            desc="Processing segments",
+            unit="batch",
+            disable=not show_progress,
+        )
+
         for idx, audio_path in enumerate(segment_files):
             logger.info(f"Processing {audio_path.name} ({idx + 1}/{len(segment_files)})")
 
@@ -164,7 +180,13 @@ def process_segments_with_sam_audio(
                     torchaudio.save(output_path.as_posix(), target_audio, sr)
                     logger.debug(f"Saved: {output_path}")
 
+                # Update progress bar
+                pbar.update(1)
+
             logger.info(f"Completed processing {audio_path.name}")
+
+        # Close progress bar
+        pbar.close()
 
 
 @click.command(name="process-sam-audio")
@@ -212,6 +234,11 @@ def process_segments_with_sam_audio(
     default=3,
     help="Number of reranking candidates. Default: 3.",
 )
+@click.option(
+    "--progress/--no-progress",
+    default=None,
+    help="Show progress bar during processing. If not specified, uses config default.",
+)
 @click.pass_context
 def process_sam_audio(
     ctx: click.Context,
@@ -223,6 +250,7 @@ def process_sam_audio(
     batch_size: int,
     predict_spans: int,
     reranking_candidates: int,
+    progress: bool | None,
 ) -> None:
     """
     Process audio segment(s) with SAM-Audio model to separate audio sources.
@@ -254,10 +282,21 @@ def process_sam_audio(
             --segment "./segments/segment*.wav" \\
             --prompts "bass,vocals" \\
             --output-dir ./out
+
+        # Disable progress bar for scripting
+        audio-playground extract process-sam-audio \\
+            --segment segment-000.wav \\
+            --prompts "bass,vocals" \\
+            --output-dir ./out \\
+            --no-progress
     """
     try:
         app_context: AppContext = ctx.obj
         logger = app_context.logger
+        config = app_context.app_config
+
+        # Use config default for progress if not specified
+        show_progress = progress if progress is not None else config.sam_audio_progress
 
         # Parse prompts
         prompts_list = [p.strip() for p in prompts.split(",") if p.strip()]
@@ -287,6 +326,7 @@ def process_sam_audio(
         logger.info(f"Output directory: {output_dir}")
         logger.info(f"Model: {model}")
         logger.info(f"Batch size: {batch_size}")
+        logger.info(f"Progress bar: {'enabled' if show_progress else 'disabled'}")
 
         # Process segments
         process_segments_with_sam_audio(
@@ -299,6 +339,7 @@ def process_sam_audio(
             logger=logger,
             predict_spans=predict_spans,
             reranking_candidates=reranking_candidates,
+            show_progress=show_progress,
         )
 
         logger.info("All done!")

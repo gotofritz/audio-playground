@@ -55,6 +55,12 @@ class AudioPlaygroundConfig(BaseSettings):
         description="Target sample rate in Hz for output files. If None, uses original sample rate.",
     )
 
+    # SAM-Audio model configuration
+    sam_audio_progress: bool = Field(
+        default=True,
+        description="Show progress bar during SAM-Audio processing",
+    )
+
     # Demucs model configuration
     demucs_model: str = Field(
         default="htdemucs_ft",
