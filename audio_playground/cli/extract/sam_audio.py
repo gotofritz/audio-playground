@@ -255,7 +255,7 @@ def phase_2_blend_and_save(
     config: AudioPlaygroundConfig,
     logger: logging.Logger,
     tmp_path: Path,
-    target: str | None,
+    output_dir: Path | None,
 ) -> None:
     """
     Phase 2: Blend segments and save final output files.
@@ -267,7 +267,7 @@ def phase_2_blend_and_save(
 
     logger.info("=== PHASE 2: Concatenation and Final Output ===")
 
-    target_path = Path(target).expanduser() if target else config.target_dir
+    target_path = output_dir.expanduser() if output_dir else config.target_dir
 
     # Use merger to handle all merging logic
     merger.merge_and_save(tmp_path, target_path, logger, config.chain_residuals, config.sample_rate)
@@ -363,7 +363,7 @@ def sam_audio(
             tmp_path = phase_1_segment_and_process(config, logger, src, prompts)
 
         # Phase 2: Blend and save (always runs)
-        phase_2_blend_and_save(config, logger, tmp_path, target)
+        phase_2_blend_and_save(config, logger, tmp_path, output_dir)
 
         logger.info("All done")
 
