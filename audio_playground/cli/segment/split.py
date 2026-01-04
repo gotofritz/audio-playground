@@ -25,7 +25,7 @@ def split(
     app_context: AppContext,
     src: Path,
     output_dir: Path,
-    window_size: float,
+    window_size: float | None,
     max_segments: int | None,
 ) -> None:
     """
@@ -35,6 +35,11 @@ def split(
     All segments except the last are exactly window-size seconds.
     """
     logger = app_context.logger
+    config = app_context.app_config
+
+    # Use config default if not specified
+    if window_size is None:
+        window_size = config.segment_window_size
 
     click.echo(f"Splitting {src} into segments...")
     logger.info(f"Splitting {src} with window size {window_size}s")

@@ -90,27 +90,25 @@ def input_dir_option(
     )
 
 
-def window_size_option(default: float | None = 10.0, required: bool = False) -> Callable[[F], F]:
+def window_size_option(required: bool = False) -> Callable[[F], F]:
     """
     Decorator for --window-size option.
 
     Args:
-        default: Default window size in seconds (None for no default)
         required: Whether the option is required
 
     Returns:
         Click option decorator
-    """
-    help_text = "Segment length in seconds"
-    if default is not None and not required:
-        help_text += f" (default: {default})"
 
+    Note:
+        Default value comes from app_config.segment_window_size (10.0)
+    """
     return click.option(
         "--window-size",
         type=float,
-        default=default,
+        default=None,
         required=required,
-        help=help_text,
+        help="Segment length in seconds. If not specified, uses config default.",
     )
 
 
