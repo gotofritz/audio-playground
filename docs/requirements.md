@@ -12,11 +12,11 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Steps 2.1-2.4 Complete, Working on 2.5
+**Current Phase:** Phase 2 In Progress | Steps 2.1-2.5 Complete, Ready for 2.6
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Steps 2.1-2.4 complete, 2.5 in progress)
+- 🚧 Phase 2: In Progress (Steps 2.1-2.5 complete, ready for 2.6)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
@@ -61,7 +61,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Status:** ✅ Complete - Created `cli/extract/process_sam_audio.py` for processing audio segments with SAM-Audio model. Supports multiple segments, glob patterns, and batch processing. Outputs `{segment}-{prompt}.wav` files (suffix applied at merge step).
 
-### Step 2.5: Create `extract process-demucs` command
+### Step 2.5: Create `extract process-demucs` command ✅
+
+**Status:** ✅ Complete - Created `cli/extract/process_demucs.py` for Demucs model processing. Supports single audio file input with stem separation (no segmentation needed). Outputs separated stems (drums, bass, other, vocals) to specified directory.
 
 - **File:** `audio_playground/cli/extract/process_demucs.py` (new)
 - **Responsibility:** Run Demucs model on audio file
@@ -412,8 +414,8 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.3:** Merge command reconstructs audio correctly
 - [x] **Step 2.4:** `audio-playground extract process-sam-audio --help` works
 - [x] **Step 2.4:** Process command handles single/multiple/glob segments
-- [ ] **Step 2.5:** `audio-playground extract process-demucs --help` works
-- [ ] **Step 2.5:** Demucs integration produces separated stems
+- [x] **Step 2.5:** `audio-playground extract process-demucs --help` works
+- [x] **Step 2.5:** Demucs integration produces separated stems
 - [ ] **Step 2.6:** `extract sam-audio` composite produces same output as current implementation
 - [ ] **Step 2.7:** `extract demucs` composite works end-to-end
 - [ ] **Phase 3:** PyTorch optimizations implemented (caching, chunking, streaming)
@@ -426,7 +428,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
-**Next Step:** Implement Step 2.5 (process-demucs command)
+**Next Step:** Implement Step 2.6 (extract sam-audio composite command)
 
 ### Additional Improvements
 

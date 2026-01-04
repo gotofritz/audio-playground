@@ -1,5 +1,6 @@
 import click
 
+from audio_playground.cli.extract.process_demucs import process_demucs
 from audio_playground.cli.extract.process_sam_audio import process_sam_audio
 from audio_playground.cli.extract.sam_audio import sam_audio
 
@@ -16,3 +17,4 @@ def extract(
 
 extract.add_command(sam_audio, name="sam-audio")
 extract.add_command(process_sam_audio)
+extract.add_command(process_demucs)
