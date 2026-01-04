@@ -7,7 +7,7 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
-from audio_playground.cli.common import output_dir_option, src_option
+from audio_playground.cli.common import output_dir_option, src_option, suffix_option
 
 
 def process_audio_with_demucs(
@@ -18,6 +18,7 @@ def process_audio_with_demucs(
     shifts: int,
     num_workers: int,
     logger: logging.Logger,
+    suffix: str,
     show_progress: bool = True,
 ) -> None:
     """
@@ -31,6 +32,8 @@ def process_audio_with_demucs(
         shifts: Number of random shifts for equivariant stabilization
         num_workers: Number of worker threads
         logger: Logger instance
+        suffix: Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav').
+                Should come from config.demucs_suffix.
         show_progress: Show progress bar during processing
     """
     # Lazy imports for performance
@@ -92,8 +95,12 @@ def process_audio_with_demucs(
     for source_idx, source_name in enumerate(model.sources):
         stem_audio = sources[source_idx]
 
-        # Build output path: {stem}.wav
-        output_path = output_dir / f"{source_name}.wav"
+        # Build output path: {stem}-{suffix}.wav or {stem}.wav if no suffix
+        if suffix:
+            output_filename = f"{source_name}-{suffix}.wav"
+        else:
+            output_filename = f"{source_name}.wav"
+        output_path = output_dir / output_filename
 
         # Save audio using demucs.audio.save_audio for consistency
         # Convert to CPU and numpy for saving
@@ -145,6 +152,7 @@ def process_audio_with_demucs(
     default=None,
     help="Show progress bar during processing. If not specified, uses config default.",
 )
+@suffix_option()
 @click.pass_context
 def process_demucs(
     ctx: click.Context,
@@ -155,6 +163,7 @@ def process_demucs(
     shifts: int | None,
     num_workers: int | None,
     progress: bool | None,
+    suffix: str | None,
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -202,6 +211,7 @@ def process_demucs(
         shifts_value = shifts if shifts is not None else config.demucs_shifts
         num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
         show_progress = progress if progress is not None else config.demucs_progress
+        suffix_value = suffix if suffix is not None else config.demucs_suffix
 
         # Determine device
         if device_value == "auto":
@@ -232,6 +242,7 @@ def process_demucs(
             shifts=shifts_value,
             num_workers=num_workers_value,
             logger=logger,
+            suffix=suffix_value,
             show_progress=show_progress,
         )
 

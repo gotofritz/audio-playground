@@ -72,6 +72,10 @@ class AudioPlaygroundConfig(BaseSettings):
         default=True,
         description="Show progress bar during Demucs processing",
     )
+    demucs_suffix: str = Field(
+        default="demucs",
+        description="Suffix for Demucs output files (e.g., 'drums-demucs.wav'). Use empty string for no suffix.",
+    )
 
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",

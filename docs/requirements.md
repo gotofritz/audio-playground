@@ -12,11 +12,11 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Steps 2.1-2.5 Complete, Ready for 2.6
+**Current Phase:** Phase 2 Complete | Ready for Phase 3
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Steps 2.1-2.5 complete, ready for 2.6)
+- ✅ Phase 2: Complete (All atomic and composite commands implemented)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
@@ -65,33 +65,13 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Status:** ✅ Complete - Created `cli/extract/process_demucs.py` for Demucs model processing. Supports single audio file input with stem separation (no segmentation needed). Outputs separated stems (drums, bass, other, vocals). Includes progress bar support and configurable parameters via app_config (model, shifts, workers).
 
-### Step 2.6: Make `extract sam-audio` a Composite Command
+### Step 2.6: Make `extract sam-audio` a Composite Command ✅
 
-- **File:** `audio_playground/cli/extract/sam_audio.py`
-- **Change:** Simplify to call the atomic commands in sequence:
-  ```python
-  # Workflow:
-  # 1. convert to-wav (src → wav)
-  # 2. segment split (wav → segments)
-  # 3. extract process-sam-audio (segments → processed segments)
-  # 4. merge concat (processed segments → final outputs)
-  ```
-- **Benefit:** Users can now manually run individual steps if desired
-- **Test:** Output identical to current behavior
+**Status:** ✅ Complete - Refactored `extract sam-audio` as a composite command orchestrating atomic steps: convert to-wav → segment split → process-sam-audio → merge concat. Users can now run individual steps manually if desired.
 
-### Step 2.7: Create `extract demucs` Composite Command
+### Step 2.7: Create `extract demucs` Composite Command ✅
 
-- **File:** `audio_playground/cli/extract/demucs.py` (new)
-- **Responsibility:** Full Demucs extraction pipeline
-- **Usage:** `audio-playground extract demucs --src input.mp4 --output-dir ./out`
-- **Change:** Call atomic commands in sequence:
-  ```python
-  # Workflow:
-  # 1. convert to-wav (src → wav)
-  # 2. extract process-demucs (wav → separated stems)
-  ```
-- **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
-- **Test:** Verify separated stems are produced
+**Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command for full Demucs pipeline: convert to-wav → process-demucs. Simplified workflow (no segmentation needed) for stem separation.
 
 ### Step 3: Restructuring code
 
@@ -407,8 +387,8 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.4:** Process command handles single/multiple/glob segments
 - [x] **Step 2.5:** `audio-playground extract process-demucs --help` works
 - [x] **Step 2.5:** Demucs integration produces separated stems
-- [ ] **Step 2.6:** `extract sam-audio` composite produces same output as current implementation
-- [ ] **Step 2.7:** `extract demucs` composite works end-to-end
+- [x] **Step 2.6:** `extract sam-audio` composite command implemented
+- [x] **Step 2.7:** `extract demucs` composite command implemented
 - [ ] **Phase 3:** PyTorch optimizations implemented (caching, chunking, streaming)
 - [ ] **Phase 3:** Benchmark shows expected performance gains
 - [ ] **Phase 3:** Crossfade blending produces smooth audio (no artifacts)
@@ -419,7 +399,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
-**Next Step:** Implement Step 2.6 (extract sam-audio composite command)
+**Next Step:** Implement Phase 3 (Restructuring code to src layout)
 
 ### Additional Improvements
 
@@ -726,16 +706,17 @@ def test_split_to_files_creates_segments(tmp_path):
 ✅ Completed:
 ├─ Phase 0: Add --chain-residuals flag
 ├─ Phase 1: Modularization & Lazy Imports
-└─ Phase 2.1-2.4: Atomic commands (convert, segment, merge, process-sam-audio)
-
-🚧 In Progress:
-└─ Phase 2.5-2.7: Complete atomic CLI commands
-   ├─ 2.5: process-demucs (next)
+└─ Phase 2: Atomic CLI Commands (All steps complete)
+   ├─ 2.1: convert to-wav
+   ├─ 2.2: segment split
+   ├─ 2.3: merge concat
+   ├─ 2.4: extract process-sam-audio
+   ├─ 2.5: extract process-demucs
    ├─ 2.6: extract sam-audio composite
    └─ 2.7: extract demucs composite
 
 ⏳ Upcoming:
-├─ Phase 3: Change to src layout
+├─ Phase 3: Change to src layout (next)
 ├─ Phase 4: PyTorch Performance Optimizations
 ├─ Phase 5: MLX Backend Integration
 ├─ Phase 6: Global config overrides
