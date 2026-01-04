@@ -28,12 +28,13 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-  "pydantic>=2.10.6",
-  "pydantic-settings>=2.6.1",
   "click>=8.1.7",
+  "demucs@git+https://github.com/gotofritz/demucs.git",
+  "pydantic-settings>=2.6.1",
+  "pydantic>=2.10.6",
+  "pydub",
   "rich>=14",
   "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
-  "pydub",
   "torch",
   "torchaudio"
 ]

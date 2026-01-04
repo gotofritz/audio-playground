@@ -81,7 +81,8 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Usage:** `audio-playground extract process-demucs --src audio.wav --output-dir ./out`
 - **Implementation:**
   - Uses `--src` (single file, no segmentation needed)
-  - Integrates with Demucs library
+  - Integrates with my fork of the Demucs library, as per pyproject.toml
+  - Demucs command called with the python equivalent of `demucs -j 4 --shifts=6 -n htdemucs_ft --filename "some/path/{stem}.{ext}" source.wav
   - Outputs separated stems to output directory
 - **Test:** Verify produces separated audio stems
 
