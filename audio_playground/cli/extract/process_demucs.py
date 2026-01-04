@@ -194,7 +194,7 @@ def process_demucs(
     try:
         app_context: AppContext = ctx.obj
         logger = app_context.logger
-        config = app_context.config
+        config = app_context.app_config
 
         # Use config defaults for any unspecified options
         model_name = model if model is not None else config.demucs_model
