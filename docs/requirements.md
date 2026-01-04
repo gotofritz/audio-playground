@@ -12,12 +12,12 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 Complete | Ready for Phase 3
+**Current Phase:** Phase 3 Complete | Ready for Phase 4
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
 - ✅ Phase 2: Complete (All atomic and composite commands implemented)
-- ⏳ Phase 3: Not Started
+- ✅ Phase 3: Complete (Restructured to src layout, replaced mypy with ty)
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
 - ⏳ Phase 6: Not Started
@@ -73,25 +73,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command for full Demucs pipeline: convert to-wav → process-demucs. Simplified workflow (no segmentation needed) for stem separation.
 
-### Step 3: Restructuring code
+## ✅ Phase 3: Restructure to src Layout
 
-- change the code to this layout
-  ```bash
-  audio-playground/
-   ├── pyproject.toml
-   ├── src/
-   │   └── audio_playground/    <-- Your code lives here
-   │       ├── __init__.py
-   │       └── main.py
-   ├── tests/
-   └── coverage/                <-- Setuptools will now ignore this
-  ```
-- change pyproject.toml accordingly
-  ```toml
-  [tool.setuptools.packages.find]
-  where = ["src"]
-  ```
-- Replace mypy with ty <https://docs.astral.sh/ty/>
+**Status:** ✅ Complete - Moved `audio_playground/` to `src/audio_playground/`. Updated `pyproject.toml` with `where = ["src"]`. Replaced mypy with ty for type checking.
 
 ## ⏳ Phase 4: PyTorch Performance Optimizations (Platform-Agnostic)
 
@@ -389,17 +373,20 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.5:** Demucs integration produces separated stems
 - [x] **Step 2.6:** `extract sam-audio` composite command implemented
 - [x] **Step 2.7:** `extract demucs` composite command implemented
-- [ ] **Phase 3:** PyTorch optimizations implemented (caching, chunking, streaming)
-- [ ] **Phase 3:** Benchmark shows expected performance gains
-- [ ] **Phase 3:** Crossfade blending produces smooth audio (no artifacts)
-- [ ] **Phase 4:** MLX backend auto-detection works on Apple Silicon
-- [ ] **Phase 4:** Backend abstraction allows switching PyTorch ↔ MLX
-- [ ] **Phase 4:** Fallback to PyTorch on missing MLX dependency
-- [ ] **Phase 5:** Global config options applied to all commands
+- [x] **Phase 3:** Restructured to src layout
+- [x] **Phase 3:** Updated pyproject.toml with src configuration
+- [x] **Phase 3:** Replaced mypy with ty
+- [ ] **Phase 4:** PyTorch optimizations implemented (caching, chunking, streaming)
+- [ ] **Phase 4:** Benchmark shows expected performance gains
+- [ ] **Phase 4:** Crossfade blending produces smooth audio (no artifacts)
+- [ ] **Phase 5:** MLX backend auto-detection works on Apple Silicon
+- [ ] **Phase 5:** Backend abstraction allows switching PyTorch ↔ MLX
+- [ ] **Phase 5:** Fallback to PyTorch on missing MLX dependency
+- [ ] **Phase 6:** Global config options applied to all commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
-**Next Step:** Implement Phase 3 (Restructuring code to src layout)
+**Next Step:** Implement Phase 4 (PyTorch Performance Optimizations)
 
 ### Additional Improvements
 
@@ -706,18 +693,18 @@ def test_split_to_files_creates_segments(tmp_path):
 ✅ Completed:
 ├─ Phase 0: Add --chain-residuals flag
 ├─ Phase 1: Modularization & Lazy Imports
-└─ Phase 2: Atomic CLI Commands (All steps complete)
-   ├─ 2.1: convert to-wav
-   ├─ 2.2: segment split
-   ├─ 2.3: merge concat
-   ├─ 2.4: extract process-sam-audio
-   ├─ 2.5: extract process-demucs
-   ├─ 2.6: extract sam-audio composite
-   └─ 2.7: extract demucs composite
+├─ Phase 2: Atomic CLI Commands (All steps complete)
+│  ├─ 2.1: convert to-wav
+│  ├─ 2.2: segment split
+│  ├─ 2.3: merge concat
+│  ├─ 2.4: extract process-sam-audio
+│  ├─ 2.5: extract process-demucs
+│  ├─ 2.6: extract sam-audio composite
+│  └─ 2.7: extract demucs composite
+└─ Phase 3: Restructure to src layout
 
 ⏳ Upcoming:
-├─ Phase 3: Change to src layout (next)
-├─ Phase 4: PyTorch Performance Optimizations
+├─ Phase 4: PyTorch Performance Optimizations (next)
 ├─ Phase 5: MLX Backend Integration
 ├─ Phase 6: Global config overrides
 ├─ Phase 7: Caching implementation

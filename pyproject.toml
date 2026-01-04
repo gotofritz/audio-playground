@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["audio_playground*"]
+where = ["src"]
 exclude = ["coverage*", "tests*", "docs*"]
 
 [tool.commitizen] # https://commitizen-tools.github.io/commitizen/config/
@@ -23,29 +23,15 @@ omit = [
   "*/tests/*"
 ]
 
-[tool.mypy] # https://mypy.readthedocs.io/en/latest/config_file.html
+[tool.ty] # https://docs.astral.sh/ty/
 exclude = ["build/"]
-strict = true
-disallow_subclassing_any = false
-disallow_untyped_decorators = false
-check_untyped_defs = true
-ignore_missing_imports = true
-pretty = true
-show_column_numbers = true
-show_error_codes = true
-show_error_context = true
-warn_unreachable = true
 
 [tool.pytest.ini_options] # https://docs.pytest.org/en/latest/reference/reference.html#ini-options-ref
-pythonpath = [
-  ".",
-  "audio_playground"
-]
 testpaths = [
   "tests"
 ]
 addopts = [
-  "--cov=audio_playground/",
+  "--cov=src/audio_playground/",
   "--cov-report=term",
   "--cov-report=html:coverage/html",
   "--cov-report=xml:coverage/coverage.xml",
@@ -106,7 +92,6 @@ dev = [
   "copier>=9",
   "commitizen>=4.11.0",
   "faker>=40.1.0",
-  "mypy>=1.17",
   "polyfactory>=3.2.0",
   "pre-commit>=4.5.1",
   "pytest>=9",
@@ -114,7 +99,8 @@ dev = [
   "pytest-datadir>=1.8",
   "pytest-env>=1.2.0",
   "ruff>=0.12.0",
-  "safety>=3.7.0"
+  "safety>=3.7.0",
+  "ty>=0.2.0"
 ]
 
 [project.scripts]
