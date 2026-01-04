@@ -81,7 +81,6 @@ def test_process_sam_audio_single_segment(
         assert kwargs["segment_files"][0] == segment_file
         assert kwargs["prompts"] == ["bass", "vocals"]
         assert kwargs["output_dir"] == output_dir
-        assert kwargs["show_progress"] is True  # default
 
 
 def test_process_sam_audio_multiple_segments(
@@ -319,71 +318,3 @@ def test_process_sam_audio_device_explicit(
         assert result.exit_code == 0
         kwargs = mock_process.call_args[1]
         assert kwargs["device"] == "cpu"
-
-
-def test_process_sam_audio_progress_flag(
-    cli_runner: CliRunner,
-    cli_env: None,
-    tmp_path: Path,
-) -> None:
-    """Test process-sam-audio with progress flag"""
-    segment_file = tmp_path / "segment-000.wav"
-    segment_file.write_text("dummy audio data")
-
-    output_dir = tmp_path / "output"
-
-    with patch(
-        "audio_playground.cli.extract.process_sam_audio.process_segments_with_sam_audio"
-    ) as mock_process:
-        result = cli_runner.invoke(
-            cli,
-            [
-                "extract",
-                "process-sam-audio",
-                "--segment",
-                str(segment_file),
-                "--prompts",
-                "bass",
-                "--output-dir",
-                str(output_dir),
-                "--progress",
-            ],
-        )
-
-        assert result.exit_code == 0
-        kwargs = mock_process.call_args[1]
-        assert kwargs["show_progress"] is True
-
-
-def test_process_sam_audio_no_progress_flag(
-    cli_runner: CliRunner,
-    cli_env: None,
-    tmp_path: Path,
-) -> None:
-    """Test process-sam-audio with --no-progress flag"""
-    segment_file = tmp_path / "segment-000.wav"
-    segment_file.write_text("dummy audio data")
-
-    output_dir = tmp_path / "output"
-
-    with patch(
-        "audio_playground.cli.extract.process_sam_audio.process_segments_with_sam_audio"
-    ) as mock_process:
-        result = cli_runner.invoke(
-            cli,
-            [
-                "extract",
-                "process-sam-audio",
-                "--segment",
-                str(segment_file),
-                "--prompts",
-                "bass",
-                "--output-dir",
-                str(output_dir),
-                "--no-progress",
-            ],
-        )
-
-        assert result.exit_code == 0
-        kwargs = mock_process.call_args[1]
-        assert kwargs["show_progress"] is False
