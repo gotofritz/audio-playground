@@ -10,7 +10,8 @@ audio-playground --help
 ```
 """
 
-import os
+import logging
+import warnings
 
 import click
 from rich.console import Console
@@ -27,7 +28,9 @@ CONTEXT_SETTINGS = dict(help_option_names=["-h", "--help"], default_map={"obj": 
 
 console = Console()
 
-os.environ["TOKENIZERS_PARALLELISM"] = "false"
+warnings.filterwarnings("ignore", category=FutureWarning)
+warnings.filterwarnings("ignore", category=UserWarning)
+logging.getLogger("torch").setLevel(logging.ERROR)
 
 
 @click.version_option(None, "--version", "-v")

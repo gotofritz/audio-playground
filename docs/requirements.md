@@ -101,7 +101,26 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
 - **Test:** Verify separated stems are produced
 
-## ⏳ Phase 3: PyTorch Performance Optimizations (Platform-Agnostic)
+### Step 3: Move to an src layout
+
+- change the code to this layout
+  ```bash
+  audio-playground/
+   ├── pyproject.toml
+   ├── src/
+   │   └── audio_playground/    <-- Your code lives here
+   │       ├── __init__.py
+   │       └── main.py
+   ├── tests/
+   └── coverage/                <-- Setuptools will now ignore this
+  ```
+- change pyproject.toml accordingly
+  ```toml
+  [tool.setuptools.packages.find]
+  where = ["src"]
+  ```
+
+## ⏳ Phase 4: PyTorch Performance Optimizations (Platform-Agnostic)
 
 - **File:** `audio_playground/core/sam_audio_optimizer.py` (new)
 - **Responsibility:** Performance optimizations that work on all platforms (Windows, Linux, Mac, CUDA, CPU)
@@ -207,7 +226,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ---
 
-## ⏳ Phase 4: MLX Backend Integration (Apple Silicon Fast Path)
+## ⏳ Phase 5: MLX Backend Integration (Apple Silicon Fast Path)
 
 - **Files:**
   - `audio_playground/core/backends/mlx_backend.py` (new)
@@ -362,7 +381,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Performance characteristics
   - Troubleshooting common issues
 
-## ⏳ Phase 5: Add Global Config Overrides to Each Command
+## ⏳ Phase 6: Add Global Config Overrides to Each Command
 
 - **File:** `audio_playground/cli/common.py` (partially complete)
 - **Status:** ⚠️ Partially complete (basic options done, global config options pending)
@@ -419,13 +438,13 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ---
 
-## ⏳ Phase 6: Lazy Caching & Artifact Reuse
+## ⏳ Phase 7: Lazy Caching & Artifact Reuse
 
 ### Goal
 
 Avoid re-processing identical inputs by caching segment files and metadata.
 
-### Step 3.1: Create cache manifest format
+### Step 7.1: Create cache manifest format
 
 - **File:** `audio_playground/core/cache_manifest.py` (new)
 - **Responsibility:**
@@ -455,7 +474,7 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 - **Test:** Manifest loads/saves correctly; hash calculation correct
 
-### Step 3.2: Create cache store
+### Step 7.2: Create cache store
 
 - **File:** `audio_playground/core/cache_store.py` (new)
 - **Responsibility:**
@@ -490,7 +509,7 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 - **Test:** Create/find executions; manifests written correctly
 
-### Step 3.3: Integrate caching into `Segmenter`
+### Step 7.3: Integrate caching into `Segmenter`
 
 - **File:** `audio_playground/core/segmenter.py` (modify)
 - **Change:** Before splitting, check if identical task cached:
@@ -519,13 +538,13 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 - **Test:** Verify cache hit copies files; cache miss computes normally
 
-### Step 3.4: Add `--no-cache` flag to commands
+### Step 7.4: Add `--no-cache` flag to commands
 
 - **File:** `audio_playground/cli/segment/split.py` (and others)
 - **Change:** Add `@click.option("--no-cache", is_flag=True, help="...")`
 - **Test:** Verify `--no-cache` bypasses caching
 
-### Step 3.5: Create cache management commands
+### Step 7.5: Create cache management commands
 
 - **File:** `audio_playground/cli/cache/__init__.py` (new)
 - **Commands:**
@@ -547,13 +566,13 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 ---
 
-## ⏳ Phase 7: YAML Runner & Workflows
+## ⏳ Phase 8: YAML Runner & Workflows
 
 ### Goal
 
 Allow users to define pipelines as YAML and run with `audio-playground run --config pipeline.yaml`.
 
-### Step 4.1: Create workflow schema
+### Step 8.1: Create workflow schema
 
 - **File:** `audio_playground/core/workflow.py` (new)
 - **Responsibility:**
@@ -590,7 +609,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 - **Test:** YAML parses correctly; schema validation works
 
-### Step 4.2: Create workflow executor
+### Step 8.2: Create workflow executor
 
 - **File:** `audio_playground/core/workflow_executor.py` (new)
 - **Responsibility:**
@@ -600,14 +619,14 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
   - Log progress
 - **Test:** Execute sample workflow; verify outputs
 
-### Step 4.3: Create `run` command
+### Step 8.3: Create `run` command
 
 - **File:** `audio_playground/cli/run.py` (new)
 - **Usage:** `audio-playground run --config pipeline.yaml`
 - **Implementation:** Load YAML, execute via `WorkflowExecutor`
 - **Test:** Run sample workflow end-to-end
 
-### Step 4.4: Add input windowing to `extract process`
+### Step 8.4: Add input windowing to `extract process`
 
 - **File:** `audio_playground/cli/extract/process.py` (modify)
 - **Change:** Add `--start-time` and `--end-time` options
@@ -618,7 +637,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 - **Implementation:** Trim input audio before processing
 - **Test:** Process specific regions; verify output duration
 
-### Step 4.5: Document YAML format & examples
+### Step 8.5: Document YAML format & examples
 
 - **File:** `docs/WORKFLOWS.md` (new)
 - **Content:**
@@ -639,13 +658,13 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 ---
 
-## ⏳ Phase 8: Testing & Coverage
+## ⏳ Phase 9: Testing & Coverage
 
 ### Goal
 
 Achieve >=95% unit test coverage; no regressions.
 
-### Step 5.1: Unit tests for `core/` modules
+### Step 9.1: Unit tests for `core/` modules
 
 - **Files:** Create `tests/core/test_*.py` for each module
 - **Coverage Target:** >=95% per module
@@ -675,7 +694,7 @@ def test_split_to_files_creates_segments(tmp_path):
     # Verify metadata JSON structure
 ```
 
-### Step 5.2: Integration tests for CLI commands
+### Step 9.2: Integration tests for CLI commands
 
 - **Files:** Create `tests/cli/test_*.py` for each command
 - **Coverage Target:** >=90% per command
@@ -684,14 +703,14 @@ def test_split_to_files_creates_segments(tmp_path):
   - Output file creation
   - Config override via CLI
 
-### Step 5.3: Regression test for `extract sam-audio`
+### Step 9.3: Regression test for `extract sam-audio`
 
 - **File:** `tests/integration/test_extract_sam_audio.py`
 - **Goal:** Ensure refactored version produces identical output to PoC
 - **Method:** Run on small test audio; compare outputs (bit-for-bit if possible)
 - **Test:** Should run in <5 min with small audio
 
-### Step 5.4: Coverage reporting
+### Step 9.4: Coverage reporting
 
 - **File:** Update `Taskfile.yml`
 - **Change:** Add task `task coverage` to open HTML report
@@ -723,12 +742,13 @@ def test_split_to_files_creates_segments(tmp_path):
    └─ 2.7: extract demucs composite
 
 ⏳ Upcoming:
-├─ Phase 3: PyTorch Performance Optimizations
-├─ Phase 4: MLX Backend Integration
-├─ Phase 5: Global config overrides
-├─ Phase 6: Caching implementation
-├─ Phase 7: YAML runner + workflows
-└─ Phase 8: Testing & coverage (>=95%)
+├─ Phase 3: Change to src layout
+├─ Phase 4: PyTorch Performance Optimizations
+├─ Phase 5: MLX Backend Integration
+├─ Phase 6: Global config overrides
+├─ Phase 7: Caching implementation
+├─ Phase 8: YAML runner + workflows
+└─ Phase 9: Testing & coverage (>=95%)
 ```
 
 ---

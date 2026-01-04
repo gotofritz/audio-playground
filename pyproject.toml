@@ -2,52 +2,9 @@
 requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
-[dependency-groups]
-dev = [
-  "copier>=9",
-  "commitizen>=4.11.0",
-  "faker>=40.1.0",
-  "mypy>=1.17",
-  "polyfactory>=3.2.0",
-  "pre-commit>=4.5.1",
-  "pytest>=9",
-  "pytest-cov>=7",
-  "pytest-datadir>=1.8",
-  "pytest-env>=1.2.0",
-  "ruff>=0.12.0",
-  "safety>=3.7.0"
-]
-
-[project]
-name = "audio-playground"
-version = "0.1.0"
-description = "Playing with sam-audio"
-authors = [
-  {name = "gotofritz", email = "gotofritz@users.noreply.github.com"}
-]
-readme = "README.md"
-requires-python = ">=3.12"
-dependencies = [
-  "click>=8.1.7",
-  "demucs@git+https://github.com/gotofritz/demucs.git",
-  "pydantic-settings>=2.6.1",
-  "pydantic>=2.10.6",
-  "pydub",
-  "rich>=14",
-  "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
-  "torch",
-  "torchaudio"
-]
-
-[project.scripts]
-audio-playground = "audio_playground.cli.__main__:cli"
-
-[project.urls]
-homepage = "https://github.com/gotofritz/audio-playground"
-source = "https://github.com/gotofritz/audio-playground"
-changelog = "https://github.com/gotofritz/audio-playground/blob/main/CHANGELOG.md"
-documentation = "https://github.com/gotofritz/audio-playground"
-issues = "https://github.com/gotofritz/audio-playground/issues"
+[tool.setuptools.packages.find]
+include = ["audio_playground*"]
+exclude = ["coverage*", "tests*", "docs*"]
 
 [tool.commitizen] # https://commitizen-tools.github.io/commitizen/config/
 bump_message = "bump(release): v$current_version → v$new_version"
@@ -122,3 +79,50 @@ table_keys = true
 
 [tool.tomlsort.overrides."typing"]
 table_keys = true
+
+[project]
+name = "audio-playground"
+version = "0.1.0"
+description = "Playing with sam-audio"
+authors = [
+  {name = "gotofritz", email = "gotofritz@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+  "click>=8.1.7",
+  "demucs@git+https://github.com/gotofritz/demucs.git",
+  "pydantic-settings>=2.6.1",
+  "pydantic>=2.10.6",
+  "pydub",
+  "rich>=14",
+  "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
+  "torch",
+  "torchaudio"
+]
+
+[project.optional-dependencies]
+dev = [
+  "copier>=9",
+  "commitizen>=4.11.0",
+  "faker>=40.1.0",
+  "mypy>=1.17",
+  "polyfactory>=3.2.0",
+  "pre-commit>=4.5.1",
+  "pytest>=9",
+  "pytest-cov>=7",
+  "pytest-datadir>=1.8",
+  "pytest-env>=1.2.0",
+  "ruff>=0.12.0",
+  "safety>=3.7.0"
+]
+
+[project.scripts]
+audio-playground = "audio_playground.cli.__main__:cli"
+
+[project.urls]
+homepage = "https://github.com/gotofritz/audio-playground"
+source = "https://github.com/gotofritz/audio-playground"
+changelog = "https://github.com/gotofritz/audio-playground/blob/main/CHANGELOG.md"
+documentation = "https://github.com/gotofritz/audio-playground"
+issues = "https://github.com/gotofritz/audio-playground/issues"

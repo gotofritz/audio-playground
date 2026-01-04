@@ -29,6 +29,7 @@ export HF_DATASETS_OFFLINE=1
 export TRANSFORMERS_OFFLINE=1
 export PIP_REQUIRE_VIRTUALENV=false
 export TOKENIZERS_PARALLELISM=false
+export TRANSFORMERS_VERBOSITY=error
 
 echo "✓ sam-audio environment variables set."
 EOF
