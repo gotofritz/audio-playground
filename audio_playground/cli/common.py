@@ -176,7 +176,9 @@ def suffix_option(default_suffix: str | None = None) -> Callable[[F], F]:
     if default_suffix is None:
         help_text = "Suffix for output files. Use empty string for no suffix. If not specified, uses config default."
     else:
-        help_text = f"Suffix for output files. Default: '{default_suffix}'. Use empty string for no suffix."
+        help_text = (
+            f"Suffix for output files. Default: '{default_suffix}'. Use empty string for no suffix."
+        )
 
     return click.option(
         "--suffix",
