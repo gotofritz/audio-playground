@@ -43,6 +43,12 @@ from audio_playground.cli.common import output_dir_option, src_option
     default=None,
     help="Show progress bar during processing. If not specified, uses config default.",
 )
+@click.option(
+    "--suffix",
+    type=str,
+    default=None,
+    help="Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav'). Use empty string for no suffix. If not specified, uses config default.",
+)
 @click.pass_context
 def demucs(
     ctx: click.Context,
@@ -53,6 +59,7 @@ def demucs(
     shifts: int | None,
     num_workers: int | None,
     progress: bool | None,
+    suffix: str | None,
 ) -> None:
     """
     Composite command: Full Demucs extraction pipeline.
@@ -94,6 +101,7 @@ def demucs(
         shifts_value = shifts if shifts is not None else config.demucs_shifts
         num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
         show_progress = progress if progress is not None else config.demucs_progress
+        suffix_value = suffix if suffix is not None else config.demucs_suffix
 
         # Log configuration
         logger.info("Starting Demucs extraction pipeline...")
@@ -150,6 +158,7 @@ def demucs(
             num_workers=num_workers_value,
             logger=logger,
             show_progress=show_progress,
+            suffix=suffix_value,
         )
 
         logger.info("All done!")

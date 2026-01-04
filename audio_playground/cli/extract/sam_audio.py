@@ -131,6 +131,9 @@ def sam_audio(
             logger.info("=== Step 1/4: Converting to WAV ===")
             from audio_playground.core.wav_converter import convert_to_wav
 
+            # Ensure src_path is not None (validated earlier)
+            assert src_path is not None, "Source path must be specified"
+
             wav_file = tmp_path / "audio.wav"
             convert_to_wav(src_path, wav_file)
             logger.info(f"Converted to: {wav_file}")

@@ -19,6 +19,7 @@ def process_audio_with_demucs(
     num_workers: int,
     logger: logging.Logger,
     show_progress: bool = True,
+    suffix: str = "demucs",
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -32,6 +33,7 @@ def process_audio_with_demucs(
         num_workers: Number of worker threads
         logger: Logger instance
         show_progress: Show progress bar during processing
+        suffix: Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav')
     """
     # Lazy imports for performance
     import torch
@@ -92,8 +94,12 @@ def process_audio_with_demucs(
     for source_idx, source_name in enumerate(model.sources):
         stem_audio = sources[source_idx]
 
-        # Build output path: {stem}.wav
-        output_path = output_dir / f"{source_name}.wav"
+        # Build output path: {stem}-{suffix}.wav or {stem}.wav if no suffix
+        if suffix:
+            output_filename = f"{source_name}-{suffix}.wav"
+        else:
+            output_filename = f"{source_name}.wav"
+        output_path = output_dir / output_filename
 
         # Save audio using demucs.audio.save_audio for consistency
         # Convert to CPU and numpy for saving
@@ -145,6 +151,12 @@ def process_audio_with_demucs(
     default=None,
     help="Show progress bar during processing. If not specified, uses config default.",
 )
+@click.option(
+    "--suffix",
+    type=str,
+    default=None,
+    help="Suffix for output files (e.g., 'demucs' for 'drums-demucs.wav'). Use empty string for no suffix. If not specified, uses config default.",
+)
 @click.pass_context
 def process_demucs(
     ctx: click.Context,
@@ -155,6 +167,7 @@ def process_demucs(
     shifts: int | None,
     num_workers: int | None,
     progress: bool | None,
+    suffix: str | None,
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -202,6 +215,7 @@ def process_demucs(
         shifts_value = shifts if shifts is not None else config.demucs_shifts
         num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
         show_progress = progress if progress is not None else config.demucs_progress
+        suffix_value = suffix if suffix is not None else config.demucs_suffix
 
         # Determine device
         if device_value == "auto":
@@ -233,6 +247,7 @@ def process_demucs(
             num_workers=num_workers_value,
             logger=logger,
             show_progress=show_progress,
+            suffix=suffix_value,
         )
 
         logger.info("All done!")
