@@ -12,11 +12,11 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Steps 2.1-2.3 Complete, Working on 2.4
+**Current Phase:** Phase 2 In Progress | Steps 2.1-2.4 Complete, Working on 2.5
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Steps 2.1-2.3 complete, 2.4 in progress)
+- 🚧 Phase 2: In Progress (Steps 2.1-2.4 complete, 2.5 in progress)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
@@ -57,22 +57,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Status:** ✅ Complete - Created `cli/merge/concat.py` wrapping `concatenate_segments()` from `core/merger.py`. Supports glob patterns. Auto-detects sample rate from first file.
 
-### Step 2.4: Create `extract process-sam-audio` command
+### Step 2.4: Create `extract process-sam-audio` command ✅
 
-- **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
-- **Responsibility:** Run SAM-Audio model on segment(s)
-- **Usage Examples:**
-  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
-  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out`
-  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out`
-- **Implementation:**
-  - `--segment` accepts multiple values (Click `multiple=True`)
-  - Expand glob patterns in segment paths
-  - Refactor existing model inference logic from Phase 1
-  - Batch process all segments with model loaded once
-  - Output files named `{segment}-{prompt}.wav` (e.g., `segment-000-bass.wav`)
-  - **Note:** Suffix is applied at merge step, not here
-- **Test:** Verify produces `{segment}-{prompt}.wav` files for each segment
+**Status:** ✅ Complete - Created `cli/extract/process_sam_audio.py` for processing audio segments with SAM-Audio model. Supports multiple segments, glob patterns, and batch processing. Outputs `{segment}-{prompt}.wav` files (suffix applied at merge step).
 
 ### Step 2.5: Create `extract process-demucs` command
 
@@ -408,8 +395,8 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.2:** Segment command produces valid output
 - [x] **Step 2.3:** `audio-playground merge concat --help` works
 - [x] **Step 2.3:** Merge command reconstructs audio correctly
-- [ ] **Step 2.4:** `audio-playground extract process-sam-audio --help` works
-- [ ] **Step 2.4:** Process command handles single/multiple/glob segments
+- [x] **Step 2.4:** `audio-playground extract process-sam-audio --help` works
+- [x] **Step 2.4:** Process command handles single/multiple/glob segments
 - [ ] **Step 2.5:** `audio-playground extract process-demucs --help` works
 - [ ] **Step 2.5:** Demucs integration produces separated stems
 - [ ] **Step 2.6:** `extract sam-audio` composite produces same output as current implementation
@@ -424,7 +411,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
-**Next Step:** Implement Step 2.4 (process-sam-audio command)
+**Next Step:** Implement Step 2.5 (process-demucs command)
 
 ### Additional Improvements
 
@@ -731,12 +718,11 @@ def test_split_to_files_creates_segments(tmp_path):
 ✅ Completed:
 ├─ Phase 0: Add --chain-residuals flag
 ├─ Phase 1: Modularization & Lazy Imports
-└─ Phase 2.1-2.3: Atomic commands (convert, segment, merge)
+└─ Phase 2.1-2.4: Atomic commands (convert, segment, merge, process-sam-audio)
 
 🚧 In Progress:
-└─ Phase 2.4-2.7: Complete atomic CLI commands
-   ├─ 2.4: process-sam-audio (in progress)
-   ├─ 2.5: process-demucs
+└─ Phase 2.5-2.7: Complete atomic CLI commands
+   ├─ 2.5: process-demucs (next)
    ├─ 2.6: extract sam-audio composite
    └─ 2.7: extract demucs composite
 
