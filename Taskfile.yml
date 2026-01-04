@@ -35,7 +35,7 @@ tasks:
   ty:
     desc: "Run ty for static type checking"
     cmds:
-      - "{{.VENV}}/ty check {{.SOURCES}}"
+      - "{{.VENV}}/ty check src"
 
   # Task to run linting and tests
   qa:
