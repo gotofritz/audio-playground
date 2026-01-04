@@ -2,7 +2,6 @@
 
 from logging import Logger
 from pathlib import Path
-from typing import cast
 
 import numpy as np
 from torch import Tensor
@@ -29,15 +28,13 @@ def concatenate_segments(segment_files: list[Path]) -> Tensor:
 
     if len(segment_files) == 1:
         audio, _ = torchaudio.load(segment_files[0])
-        # casting purely for mypy; there is nothing wrong with just
-        # returning audio.float()
-        return cast(Tensor, audio.float())
+        return audio.float()
 
     # Load all segments
     all_audio: list[Tensor] = []
     for seg_file in segment_files:
         audio, _ = torchaudio.load(seg_file)
-        all_audio.append(cast(Tensor, audio.squeeze(0)))
+        all_audio.append(audio.squeeze(0))
 
     # Simple concatenation
     concatenated = np.concatenate(all_audio)

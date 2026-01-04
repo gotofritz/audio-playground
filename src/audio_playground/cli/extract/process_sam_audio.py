@@ -81,7 +81,7 @@ def process_segments_with_sam_audio(
     device: str,
     batch_size: int,
     logger: logging.Logger,
-    predict_spans: int,
+    predict_spans: bool,
     reranking_candidates: int,
 ) -> None:
     """
@@ -95,7 +95,7 @@ def process_segments_with_sam_audio(
         device: Device to use (cpu, cuda, mps, etc.)
         batch_size: Number of prompts to process in a batch
         logger: Logger instance
-        predict_spans: Number of spans to predict
+        predict_spans: Enable span prediction
         reranking_candidates: Number of reranking candidates
     """
     # Lazy imports for performance
@@ -141,7 +141,7 @@ def process_segments_with_sam_audio(
                 # Process all prompts in this batch together
                 # SAM-Audio processor requires len(audios) == len(descriptions)
                 # So we duplicate the audio path for each prompt in the batch
-                inputs = processor(
+                inputs = processor(  # type: ignore[call-non-callable]
                     audios=[audio_path.as_posix()] * len(prompt_batch),
                     descriptions=prompt_batch,
                 ).to(device)
@@ -202,9 +202,9 @@ def process_segments_with_sam_audio(
 )
 @click.option(
     "--predict-spans",
-    type=int,
-    default=8,
-    help="Number of spans to predict. Default: 8.",
+    is_flag=True,
+    default=False,
+    help="Enable span prediction.",
 )
 @click.option(
     "--reranking-candidates",
@@ -221,7 +221,7 @@ def process_sam_audio(
     model: str,
     device: str,
     batch_size: int,
-    predict_spans: int,
+    predict_spans: bool,
     reranking_candidates: int,
 ) -> None:
     """
