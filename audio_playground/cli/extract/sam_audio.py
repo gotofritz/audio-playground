@@ -13,7 +13,11 @@ from audio_playground.cli.common import (
     src_option,
     window_size_option,
 )
+from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
+from audio_playground.core.merger import concatenate_segments
+from audio_playground.core.segmenter import create_segments, split_to_files
+from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
 
 @click.command(name="sam-audio")
@@ -129,7 +133,6 @@ def sam_audio(
 
             # Step 1: Convert to WAV
             logger.info("=== Step 1/4: Converting to WAV ===")
-            from audio_playground.core.wav_converter import convert_to_wav
 
             # Ensure src_path is not None (validated earlier)
             assert src_path is not None, "Source path must be specified"
@@ -140,11 +143,6 @@ def sam_audio(
 
             # Step 2: Segment audio
             logger.info("=== Step 2/4: Segmenting audio ===")
-            from audio_playground.core.segmenter import (
-                create_segments,
-                split_to_files,
-            )
-            from audio_playground.core.wav_converter import load_audio_duration
 
             total_duration = load_audio_duration(wav_file)
             logger.info(f"Total audio length: {total_duration:.2f} seconds")
@@ -167,11 +165,6 @@ def sam_audio(
         logger.info("=== Step 3/4: Processing with SAM-Audio ===")
         processed_dir = tmp_path / "processed"
         processed_dir.mkdir(parents=True, exist_ok=True)
-
-        # Import processing function
-        from audio_playground.cli.extract.process_sam_audio import (
-            process_segments_with_sam_audio,
-        )
 
         # Find segment files if continuing
         if continue_from:
@@ -211,10 +204,8 @@ def sam_audio(
         target_path = config.target_dir
         target_path.mkdir(parents=True, exist_ok=True)
 
-        # Merge processed segments for each prompt
+        # Merge processed segments for each prompt (import torchaudio lazily)
         import torchaudio
-
-        from audio_playground.core.merger import concatenate_segments
 
         for prompt in config.prompts:
             safe_prompt = prompt.replace(" ", "_").replace("/", "_")

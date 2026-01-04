@@ -8,6 +8,8 @@ import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import output_dir_option, src_option, suffix_option
+from audio_playground.cli.extract.process_demucs import process_audio_with_demucs
+from audio_playground.core.wav_converter import convert_to_wav
 
 
 @click.command(name="demucs")
@@ -116,17 +118,12 @@ def demucs(
 
         # Step 1: Convert to WAV
         logger.info("=== Step 1/2: Converting to WAV ===")
-        from audio_playground.core.wav_converter import convert_to_wav
-
         wav_file = tmp_path / "audio.wav"
         convert_to_wav(src, wav_file)
         logger.info(f"Converted to: {wav_file}")
 
         # Step 2: Process with Demucs
         logger.info("=== Step 2/2: Processing with Demucs ===")
-        from audio_playground.cli.extract.process_demucs import (
-            process_audio_with_demucs,
-        )
 
         # Determine device
         if device_value == "auto":
