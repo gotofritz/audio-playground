@@ -333,11 +333,9 @@ def test_process_sam_audio_device_auto(
         patch(
             "audio_playground.cli.extract.process_sam_audio.process_segments_with_sam_audio"
         ) as mock_process,
-        patch("audio_playground.cli.extract.process_sam_audio.torch") as mock_torch,
+        patch("torch.accelerator.is_available", return_value=True),
+        patch("torch.accelerator.current_accelerator", return_value=mock_accelerator),
     ):
-        mock_torch.accelerator.is_available.return_value = True
-        mock_torch.accelerator.current_accelerator.return_value = mock_accelerator
-
         result = cli_runner.invoke(
             cli,
             [
