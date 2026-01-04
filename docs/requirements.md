@@ -62,17 +62,17 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
 - **Responsibility:** Run SAM-Audio model on segment(s)
 - **Usage Examples:**
-  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
-  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
-  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out  --suffix sam`
+  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
+  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out`
+  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out`
 - **Implementation:**
   - `--segment` accepts multiple values (Click `multiple=True`)
-  - `--suffix` is an optional arg which is either string or bool; if a string, it is appended to the prompt (e.g. bass-a_string.wav); if not passed, the default is used (default is 'sam', i.e. bass-sam.wav); if false, no suffix at all (i.e. bass.wav). Note that currently targets as saved as sam-bass.wav, so this is a change in behaviour.
-  - Suffix should be a decorator, as it is going to be used by every process command (and the default is process specific; i.e. demucs will use demucs as suffix)
   - Expand glob patterns in segment paths
   - Refactor existing model inference logic from Phase 1
   - Batch process all segments with model loaded once
-- **Test:** Verify produces `{segment}-target-{prompt}.wav` files for each segment
+  - Output files named `{segment}-{prompt}.wav` (e.g., `segment-000-bass.wav`)
+  - **Note:** Suffix is applied at merge step, not here
+- **Test:** Verify produces `{segment}-{prompt}.wav` files for each segment
 
 ### Step 2.5: Create `extract process-demucs` command
 

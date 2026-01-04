@@ -8,7 +8,7 @@ from pathlib import Path
 import click
 
 from audio_playground.app_context import AppContext
-from audio_playground.cli.common import output_dir_option, suffix_option
+from audio_playground.cli.common import output_dir_option
 from audio_playground.config.app_config import Model
 
 
@@ -77,7 +77,6 @@ def process_segments_with_sam_audio(
     segment_files: list[Path],
     prompts: list[str],
     output_dir: Path,
-    suffix: str,
     model_name: str,
     device: str,
     batch_size: int,
@@ -92,7 +91,6 @@ def process_segments_with_sam_audio(
         segment_files: List of segment file paths to process
         prompts: List of text prompts for separation
         output_dir: Output directory for processed files
-        suffix: Suffix to append to output filenames (empty string for no suffix)
         model_name: Model name/path for SAM-Audio
         device: Device to use (cpu, cuda, mps, etc.)
         batch_size: Number of prompts to process in a batch
@@ -158,12 +156,8 @@ def process_segments_with_sam_audio(
                 for prompt_idx_in_batch, prompt in enumerate(prompt_batch):
                     safe_prompt = prompt.replace(" ", "_").replace("/", "_")
 
-                    # Build output filename: {segment_stem}-{prompt}-{suffix}.wav
-                    # If suffix is empty, use: {segment_stem}-{prompt}.wav
-                    if suffix:
-                        output_filename = f"{audio_path.stem}-{safe_prompt}-{suffix}.wav"
-                    else:
-                        output_filename = f"{audio_path.stem}-{safe_prompt}.wav"
+                    # Build output filename: {segment_stem}-{prompt}.wav
+                    output_filename = f"{audio_path.stem}-{safe_prompt}.wav"
 
                     output_path = output_dir / output_filename
                     target_audio = result.target[prompt_idx_in_batch].unsqueeze(0).cpu()
@@ -188,7 +182,6 @@ def process_segments_with_sam_audio(
     help="Comma-separated list of text prompts to separate (e.g., 'bass,vocals,drums').",
 )
 @output_dir_option(required=True, help_text="Output directory for processed segment files")
-@suffix_option(default_suffix="sam")
 @click.option(
     "--model",
     type=click.Choice([m.value for m in Model], case_sensitive=False),
@@ -225,7 +218,6 @@ def process_sam_audio(
     segment: tuple[str, ...],
     prompts: str,
     output_dir: Path,
-    suffix: str,
     model: str,
     device: str,
     batch_size: int,
@@ -236,7 +228,11 @@ def process_sam_audio(
     Process audio segment(s) with SAM-Audio model to separate audio sources.
 
     This command runs the SAM-Audio model on one or more audio segments,
-    producing separated audio files for each prompt.
+    producing separated audio files for each prompt. Output files are named
+    {segment}-{prompt}.wav (e.g., segment-000-bass.wav).
+
+    The suffix for final merged outputs should be applied in the merge step,
+    not here.
 
     Examples:
 
@@ -258,20 +254,6 @@ def process_sam_audio(
             --segment "./segments/segment*.wav" \\
             --prompts "bass,vocals" \\
             --output-dir ./out
-
-        # Custom suffix
-        audio-playground extract process-sam-audio \\
-            --segment segment-000.wav \\
-            --prompts "bass,vocals" \\
-            --output-dir ./out \\
-            --suffix custom
-
-        # No suffix
-        audio-playground extract process-sam-audio \\
-            --segment segment-000.wav \\
-            --prompts "bass,vocals" \\
-            --output-dir ./out \\
-            --suffix ""
     """
     try:
         app_context: AppContext = ctx.obj
@@ -303,7 +285,6 @@ def process_sam_audio(
         # Log configuration
         logger.info(f"Prompts: {prompts_list}")
         logger.info(f"Output directory: {output_dir}")
-        logger.info(f"Suffix: '{suffix}'" if suffix else "Suffix: (none)")
         logger.info(f"Model: {model}")
         logger.info(f"Batch size: {batch_size}")
 
@@ -312,7 +293,6 @@ def process_sam_audio(
             segment_files=segment_files,
             prompts=prompts_list,
             output_dir=output_dir,
-            suffix=suffix,
             model_name=model,
             device=device,
             batch_size=batch_size,

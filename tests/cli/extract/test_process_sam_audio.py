@@ -82,7 +82,7 @@ def test_process_sam_audio_single_segment(
         assert kwargs["segment_files"][0] == segment_file
         assert kwargs["prompts"] == ["bass", "vocals"]
         assert kwargs["output_dir"] == output_dir
-        assert kwargs["suffix"] == "sam"  # Default suffix
+        # No suffix in kwargs anymore
 
 
 def test_process_sam_audio_multiple_segments(
@@ -128,76 +128,6 @@ def test_process_sam_audio_multiple_segments(
         # Segments should be sorted
         assert kwargs["segment_files"][0] == segment1
         assert kwargs["segment_files"][1] == segment2
-
-
-def test_process_sam_audio_custom_suffix(
-    cli_runner: CliRunner,
-    cli_env: None,
-    tmp_path: Path,
-) -> None:
-    """Test process-sam-audio with custom suffix"""
-    segment_file = tmp_path / "segment-000.wav"
-    segment_file.write_text("dummy audio data")
-
-    output_dir = tmp_path / "output"
-
-    with patch(
-        "audio_playground.cli.extract.process_sam_audio.process_segments_with_sam_audio"
-    ) as mock_process:
-        result = cli_runner.invoke(
-            cli,
-            [
-                "extract",
-                "process-sam-audio",
-                "--segment",
-                str(segment_file),
-                "--prompts",
-                "bass",
-                "--output-dir",
-                str(output_dir),
-                "--suffix",
-                "custom",
-            ],
-        )
-
-        assert result.exit_code == 0
-        kwargs = mock_process.call_args[1]
-        assert kwargs["suffix"] == "custom"
-
-
-def test_process_sam_audio_no_suffix(
-    cli_runner: CliRunner,
-    cli_env: None,
-    tmp_path: Path,
-) -> None:
-    """Test process-sam-audio with no suffix (empty string)"""
-    segment_file = tmp_path / "segment-000.wav"
-    segment_file.write_text("dummy audio data")
-
-    output_dir = tmp_path / "output"
-
-    with patch(
-        "audio_playground.cli.extract.process_sam_audio.process_segments_with_sam_audio"
-    ) as mock_process:
-        result = cli_runner.invoke(
-            cli,
-            [
-                "extract",
-                "process-sam-audio",
-                "--segment",
-                str(segment_file),
-                "--prompts",
-                "bass",
-                "--output-dir",
-                str(output_dir),
-                "--suffix",
-                "",
-            ],
-        )
-
-        assert result.exit_code == 0
-        kwargs = mock_process.call_args[1]
-        assert kwargs["suffix"] == ""
 
 
 def test_expand_segment_paths_single(tmp_path: Path) -> None:
