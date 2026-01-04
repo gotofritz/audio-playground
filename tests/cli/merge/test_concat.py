@@ -142,6 +142,7 @@ def test_merge_concat_custom_pattern(
     with (
         patch("audio_playground.cli.merge.concat.concatenate_segments") as mock_concat,
         patch("torchaudio.load") as mock_load,
+        patch("torchaudio.save") as mock_save,
     ):
         mock_concat.return_value = mock_tensor
         mock_load.return_value = (mock_tensor, 44100)
