@@ -63,17 +63,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ### Step 2.5: Create `extract process-demucs` command ✅
 
-**Status:** ✅ Complete - Created `cli/extract/process_demucs.py` for Demucs model processing. Supports single audio file input with stem separation (no segmentation needed). Outputs separated stems (drums, bass, other, vocals) to specified directory.
-
-- **File:** `audio_playground/cli/extract/process_demucs.py` (new)
-- **Responsibility:** Run Demucs model on audio file
-- **Usage:** `audio-playground extract process-demucs --src audio.wav --output-dir ./out`
-- **Implementation:**
-  - Uses `--src` (single file, no segmentation needed)
-  - Integrates with my fork of the Demucs library, as per pyproject.toml
-  - Demucs command called with the python equivalent of `demucs -j 4 --shifts=6 -n htdemucs_ft --filename "some/path/{stem}.{ext}" source.wav
-  - Outputs separated stems to output directory
-- **Test:** Verify produces separated audio stems
+**Status:** ✅ Complete - Created `cli/extract/process_demucs.py` for Demucs model processing. Supports single audio file input with stem separation (no segmentation needed). Outputs separated stems (drums, bass, other, vocals). Includes progress bar support and configurable parameters via app_config (model, shifts, workers).
 
 ### Step 2.6: Make `extract sam-audio` a Composite Command
 
