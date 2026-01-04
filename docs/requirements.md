@@ -36,6 +36,7 @@ Added conditional residual-chaining logic with `--chain-residuals` flag to `Audi
 **Status:** ✅ Complete
 
 Created `core/` package with modular functions:
+
 - `wav_converter.py` - audio format conversion and duration loading
 - `segmenter.py` - fixed-window audio segmentation
 - `merger.py` - segment concatenation with prompt-based file matching
@@ -77,11 +78,13 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 - **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
 - **Responsibility:** Run SAM-Audio model on segment(s)
 - **Usage Examples:**
-  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out`
-  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out`
-  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out`
+  - Single segment: `audio-playground extract process-sam-audio --segment segment-000.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
+  - Multiple segments: `audio-playground extract process-sam-audio --segment segment-000.wav --segment segment-001.wav --prompts "bass,vocals" --output-dir ./out --suffix sam`
+  - Glob pattern: `audio-playground extract process-sam-audio --segment "./segments/segment*.wav" --prompts "bass,vocals" --output-dir ./out  --suffix sam`
 - **Implementation:**
   - `--segment` accepts multiple values (Click `multiple=True`)
+  - `--suffix` is an optional arg which is either string or bool; if a string, it is appended to the prompt (e.g. bass-a_string.wav); if not passed, the default is used (default is 'sam', i.e. bass-sam.wav); if false, no suffix at all (i.e. bass.wav). Note that currently targets as saved as sam-bass.wav, so this is a change in behaviour.
+  - Suffix should be a decorator, as it is going to be used by every process command (and the default is process specific; i.e. demucs will use demucs as suffix)
   - Expand glob patterns in segment paths
   - Refactor existing model inference logic from Phase 1
   - Batch process all segments with model loaded once
@@ -170,6 +173,7 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 ### Additional Improvements (Phase 2)
 
 **CI/CD Enhancements:**
+
 - ✅ GitHub Actions workflow for automated QA checks
   - Runs `task qa` on all pushes and PRs
   - Blocks PR merge if QA fails
@@ -184,6 +188,7 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
   - Runs even on test failures
 
 **Files Added:**
+
 - `.github/workflows/qa.yml` - CI/CD workflow
 - `.github/COVERAGE_BADGE.md` - Badge usage documentation
 
@@ -519,7 +524,7 @@ Week 5:
 
 - [x] `audio-playground --help` runs in <1s
 - [x] `audio-playground extract sam-audio` still works (regression test passes)
-- [ ] >=95% unit test coverage
+- [ ] > =95% unit test coverage
 - [ ] All atomic commands functional
 - [ ] Caching provides measurable speedup (2nd run >=10x faster for segment step)
 - [ ] YAML workflows execute end-to-end
