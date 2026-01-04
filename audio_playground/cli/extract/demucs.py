@@ -1,6 +1,5 @@
 """Composite command for full Demucs extraction pipeline."""
 
-import logging
 import traceback
 import uuid
 from pathlib import Path
@@ -93,12 +92,8 @@ def demucs(
         model_name = model if model is not None else config.demucs_model
         device_value = device if device is not None else config.device
         shifts_value = shifts if shifts is not None else config.demucs_shifts
-        num_workers_value = (
-            num_workers if num_workers is not None else config.demucs_num_workers
-        )
-        show_progress = (
-            progress if progress is not None else config.demucs_progress
-        )
+        num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
+        show_progress = progress if progress is not None else config.demucs_progress
 
         # Log configuration
         logger.info("Starting Demucs extraction pipeline...")
@@ -163,7 +158,5 @@ def demucs(
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
-        click.echo(
-            f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}", err=True
-        )
+        click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}", err=True)
         ctx.exit(1)

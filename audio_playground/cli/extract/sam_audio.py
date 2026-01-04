@@ -1,6 +1,5 @@
 """Composite command for full SAM-Audio extraction pipeline."""
 
-import logging
 import traceback
 import uuid
 from pathlib import Path
@@ -14,7 +13,7 @@ from audio_playground.cli.common import (
     src_option,
     window_size_option,
 )
-from audio_playground.config.app_config import AudioPlaygroundConfig, Model
+from audio_playground.config.app_config import Model
 
 
 @click.command(name="sam-audio")
@@ -119,9 +118,7 @@ def sam_audio(
             tmp_path = Path(continue_from)
             wav_file = tmp_path / "audio.wav"
             if not wav_file.exists():
-                raise FileNotFoundError(
-                    f"Cannot continue: {wav_file} not found in {tmp_path}"
-                )
+                raise FileNotFoundError(f"Cannot continue: {wav_file} not found in {tmp_path}")
         else:
             # Generate unique temp directory for this run
             run_id = str(uuid.uuid4())
@@ -160,9 +157,7 @@ def sam_audio(
                 f"{[round(s, 2) for s in segment_lengths]}"
             )
 
-            segment_files, segment_metadata = split_to_files(
-                wav_file, tmp_path, segment_lengths
-            )
+            segment_files, segment_metadata = split_to_files(wav_file, tmp_path, segment_lengths)
             logger.info(f"Created {len(segment_files)} segments in {tmp_path}")
 
         # Step 3: Process segments with SAM-Audio
@@ -179,9 +174,7 @@ def sam_audio(
         if continue_from:
             segment_files = sorted(tmp_path.glob("segment-*.wav"))
             if not segment_files:
-                raise FileNotFoundError(
-                    f"No segment-*.wav files found in {tmp_path}"
-                )
+                raise FileNotFoundError(f"No segment-*.wav files found in {tmp_path}")
 
         # Determine device
         device = config.device
@@ -211,15 +204,14 @@ def sam_audio(
 
         # Step 4: Merge segments and save final output
         logger.info("=== Step 4/4: Merging and saving final output ===")
-        from audio_playground.core import merger
 
         target_path = config.target_dir
         target_path.mkdir(parents=True, exist_ok=True)
 
         # Merge processed segments for each prompt
-        from audio_playground.core.merger import concatenate_segments
-
         import torchaudio
+
+        from audio_playground.core.merger import concatenate_segments
 
         for prompt in config.prompts:
             safe_prompt = prompt.replace(" ", "_").replace("/", "_")
@@ -234,9 +226,7 @@ def sam_audio(
                 )
                 continue
 
-            logger.info(
-                f"Merging {len(prompt_segments)} segments for prompt '{prompt}'"
-            )
+            logger.info(f"Merging {len(prompt_segments)} segments for prompt '{prompt}'")
 
             # Concatenate segments
             concatenated = concatenate_segments(prompt_segments)
@@ -250,12 +240,8 @@ def sam_audio(
 
             # Apply target sample rate if specified
             if config.sample_rate and config.sample_rate != sr:
-                logger.info(
-                    f"Resampling from {sr}Hz to {config.sample_rate}Hz"
-                )
-                resampler = torchaudio.transforms.Resample(
-                    sr, config.sample_rate
-                )
+                logger.info(f"Resampling from {sr}Hz to {config.sample_rate}Hz")
+                resampler = torchaudio.transforms.Resample(sr, config.sample_rate)
                 concatenated = resampler(concatenated)
                 sr = config.sample_rate
 
@@ -278,7 +264,5 @@ def sam_audio(
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
-        click.echo(
-            f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}"
-        )
+        click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}")
         ctx.exit(1)
