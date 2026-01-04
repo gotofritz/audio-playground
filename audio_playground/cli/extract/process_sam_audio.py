@@ -137,10 +137,16 @@ def process_segments_with_sam_audio(
             desc="Processing segments",
             unit="batch",
             disable=not show_progress,
+            position=0,
+            leave=True,
         )
 
         for idx, audio_path in enumerate(segment_files):
-            logger.info(f"Processing {audio_path.name} ({idx + 1}/{len(segment_files)})")
+            # Use tqdm.write() when progress bar is enabled, logger.info() otherwise
+            if show_progress:
+                pbar.write(f"Processing {audio_path.name} ({idx + 1}/{len(segment_files)})")
+            else:
+                logger.info(f"Processing {audio_path.name} ({idx + 1}/{len(segment_files)})")
 
             # Process prompts in batches for efficiency
             prompt_batches = batch_items(prompts, batch_size)
@@ -183,7 +189,11 @@ def process_segments_with_sam_audio(
                 # Update progress bar
                 pbar.update(1)
 
-            logger.info(f"Completed processing {audio_path.name}")
+            # Log completion
+            if show_progress:
+                pbar.write(f"Completed processing {audio_path.name}")
+            else:
+                logger.info(f"Completed processing {audio_path.name}")
 
         # Close progress bar
         pbar.close()
