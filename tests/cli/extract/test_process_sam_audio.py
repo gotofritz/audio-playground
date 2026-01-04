@@ -81,7 +81,6 @@ def test_process_sam_audio_single_segment(
         assert kwargs["segment_files"][0] == segment_file
         assert kwargs["prompts"] == ["bass", "vocals"]
         assert kwargs["output_dir"] == output_dir
-        # No suffix in kwargs anymore
 
 
 def test_process_sam_audio_multiple_segments(

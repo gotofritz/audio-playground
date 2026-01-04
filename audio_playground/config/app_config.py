@@ -55,6 +55,24 @@ class AudioPlaygroundConfig(BaseSettings):
         description="Target sample rate in Hz for output files. If None, uses original sample rate.",
     )
 
+    # Demucs model configuration
+    demucs_model: str = Field(
+        default="htdemucs_ft",
+        description="Demucs model name (e.g., htdemucs, htdemucs_ft, htdemucs_6s)",
+    )
+    demucs_shifts: int = Field(
+        default=6,
+        description="Number of random shifts for equivariant stabilization in Demucs (higher=better quality but slower)",
+    )
+    demucs_num_workers: int = Field(
+        default=4,
+        description="Number of worker threads for Demucs processing",
+    )
+    demucs_progress: bool = Field(
+        default=True,
+        description="Show progress bar during Demucs processing",
+    )
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         env_file=".env",
