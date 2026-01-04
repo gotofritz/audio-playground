@@ -90,21 +90,27 @@ def input_dir_option(
     )
 
 
-def window_size_option(default: float = 10.0) -> Callable[[F], F]:
+def window_size_option(default: float | None = 10.0, required: bool = False) -> Callable[[F], F]:
     """
     Decorator for --window-size option.
 
     Args:
-        default: Default window size in seconds
+        default: Default window size in seconds (None for no default)
+        required: Whether the option is required
 
     Returns:
         Click option decorator
     """
+    help_text = "Segment length in seconds"
+    if default is not None and not required:
+        help_text += f" (default: {default})"
+
     return click.option(
         "--window-size",
         type=float,
         default=default,
-        help=f"Segment length in seconds (default: {default})",
+        required=required,
+        help=help_text,
     )
 
 
