@@ -293,7 +293,9 @@ def process_sam_audio(
             import torch
 
             accelerator = (
-                torch.accelerator.current_accelerator() if torch.accelerator.is_available() else None
+                torch.accelerator.current_accelerator()
+                if torch.accelerator.is_available()
+                else None
             )
             device = accelerator.type if accelerator is not None else "cpu"
             logger.info(f"Auto-detected device: {device}")

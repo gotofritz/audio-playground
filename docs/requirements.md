@@ -97,6 +97,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Implementation:**
 
   **Text Feature Caching:**
+
   ```python
   class PromptCache:
       """Cache text embeddings to avoid re-encoding same prompts"""
@@ -106,6 +107,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **Chunked Processing with Crossfade:**
+
   ```python
   def process_long_audio(
       audio_path: Path,
@@ -121,6 +123,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **Streaming/Generator Mode:**
+
   ```python
   def process_streaming(
       audio_path: Path,
@@ -135,6 +138,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **Configurable ODE Solvers:**
+
   ```python
   class SolverConfig:
       method: Literal["euler", "midpoint"] = "midpoint"  # euler=faster, midpoint=quality
@@ -146,6 +150,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **Memory Management:**
+
   ```python
   def clear_caches(device: str) -> None:
       """Explicit cache clearing between chunks/batches"""
@@ -157,6 +162,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
 - **Configuration Options:** Add to `app_config.py`:
+
   ```python
   # Performance optimization settings
   enable_prompt_caching: bool = True
@@ -169,6 +175,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
 - **CLI Integration:** Add options to `extract process-sam-audio`:
+
   ```python
   @click.option("--streaming", is_flag=True, help="Stream results chunk-by-chunk")
   @click.option("--solver", type=click.Choice(["euler", "midpoint"]), help="ODE solver method")
@@ -177,6 +184,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
 - **Expected Performance Gains:**
+
   - Text caching: 20-30% speedup for multi-segment processing
   - Chunked processing: Enables arbitrarily long audio (previously limited by memory)
   - Streaming: First results in ~10-15s vs full processing time
@@ -198,6 +206,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Implementation:**
 
   **Backend Abstraction:**
+
   ```python
   # audio_playground/core/backends/__init__.py
   from abc import ABC, abstractmethod
@@ -228,6 +237,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **MLX Backend:**
+
   ```python
   # audio_playground/core/backends/mlx_backend.py
   try:
@@ -260,6 +270,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
   **PyTorch Backend:**
+
   ```python
   # audio_playground/core/backends/pytorch_backend.py
   class PyTorchBackend(AudioBackend):
@@ -282,6 +293,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
 - **Configuration:** Add to `app_config.py`:
+
   ```python
   backend: Literal["auto", "mlx", "pytorch"] = "auto"
   # auto: Use MLX on Apple Silicon if available, PyTorch otherwise
@@ -290,24 +302,29 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   ```
 
 - **CLI Integration:**
+
   ```python
   @click.option("--backend", type=click.Choice(["auto", "mlx", "pytorch"]), default="auto",
                 help="Processing backend (auto=detect best, mlx=Apple Silicon only)")
   ```
 
 - **Installation Instructions:** Update `README.md`:
+
   ```markdown
   ## Installation
 
   ### Standard (All Platforms)
+
   pip install -e .
 
   ### Apple Silicon (M1/M2/M3) - Faster Performance
+
   pip install -e .
-  pip install mlx-audio  # Optional: 10-50x speedup on Mac
+  pip install mlx-audio # Optional: 10-50x speedup on Mac
   ```
 
 - **Performance Comparison Table:**
+
   ```
   Platform          | Backend  | 2min Audio | Speedup
   ------------------|----------|------------|--------
@@ -320,6 +337,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 - **Fallback Behavior:** If MLX fails (e.g., older Mac, missing dependency), automatically fall back to PyTorch with warning
 - **Test:**
+
   - Verify auto-detection on Mac with/without mlx-audio
   - Verify forced backend selection works
   - Verify fallback on import error
