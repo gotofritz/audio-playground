@@ -4,7 +4,7 @@
 
 Transform the monolithic `extract sam-audio` command into a modular, testable, cacheable toolkit while maintaining backward compatibility.
 
-**Total Phases:** 5 (including current PoC)
+**Total Phases:** 10
 **Estimated Effort:** ~40-50 incremental changes
 **Testing Target:** >=95% coverage by end
 
@@ -12,36 +12,31 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 2 In Progress | Steps 2.1-2.3 Complete
+**Current Phase:** Phase 2 In Progress | Steps 2.1-2.3 Complete, Working on 2.4
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
-- 🚧 Phase 2: In Progress (Steps 2.1-2.3 complete)
+- 🚧 Phase 2: In Progress (Steps 2.1-2.3 complete, 2.4 in progress)
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
+- ⏳ Phase 6: Not Started
+- ⏳ Phase 7: Not Started
+- ⏳ Phase 8: Not Started
+- ⏳ Phase 9: Not Started
+- ⏳ Phase 10: Not Started
 
 ---
 
 ## ✅ Phase 0: Add `--chain-residuals` Flag
 
-**Status:** ✅ Complete
-
-Added conditional residual-chaining logic with `--chain-residuals` flag to `AudioPlaygroundConfig`. Flag controls whether cumulative residual (`sam-other.wav`) is computed when multiple prompts are used. Defaults to `False` for cleaner output.
+**Status:** ✅ Complete - Added `--chain-residuals` flag to `AudioPlaygroundConfig` for conditional residual-chaining logic.
 
 ---
 
 ## ✅ Phase 1: Modularization & Lazy Imports
 
-**Status:** ✅ Complete
-
-Created `core/` package with modular functions:
-
-- `wav_converter.py` - audio format conversion and duration loading
-- `segmenter.py` - fixed-window audio segmentation
-- `merger.py` - segment concatenation with prompt-based file matching
-
-Implemented lazy imports for torch/torchaudio to make `--help` fast (<1s). Added CLI options: `--sample-rate`, `--max-segments`, `--segment-window-size` (default: 10.0s). Refactored `sam_audio.py` to use core modules with dependency injection for logger. All type checking passes with `--strict`.
+**Status:** ✅ Complete - Created `core/` package (`wav_converter.py`, `segmenter.py`, `merger.py`). Implemented lazy imports for torch/torchaudio. Added CLI options for sample-rate, max-segments, and segment-window-size. Type checking passes with `--strict`.
 
 ---
 
@@ -54,26 +49,17 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ### Step 2.1: Create `convert` command ✅
 
-**Status:** ✅ Complete
-**Files:** `cli/convert/{__init__.py, to_wav.py}`, `cli/common.py`, `tests/cli/convert/test_to_wav.py`
-**Usage:** `audio-playground convert to-wav --src input.mp4 --target output.wav`
-Wraps `convert_to_wav()` from `core/wav_converter.py`. Common option decorators created for consistency across commands.
+**Status:** ✅ Complete - Created `cli/convert/to_wav.py` wrapping `convert_to_wav()` from `core/wav_converter.py`. Common option decorators created for consistency.
 
 ### Step 2.2: Create `segment` command ✅
 
-**Status:** ✅ Complete
-**Files:** `cli/segment/{__init__.py, split.py}`, `tests/cli/segment/test_split.py`
-**Usage:** `audio-playground segment split --src input.wav --output-dir ./segments --window-size 10.0`
-Wraps `create_segments()` and `split_to_files()` from `core/segmenter.py`. Outputs segment files and `segment_metadata.json`.
+**Status:** ✅ Complete - Created `cli/segment/split.py` wrapping `create_segments()` and `split_to_files()` from `core/segmenter.py`. Outputs segment files and `segment_metadata.json`.
 
 ### Step 2.3: Create `merge` command ✅
 
-**Status:** ✅ Complete
-**Files:** `cli/merge/{__init__.py, concat.py}`, `cli/common.py` (pattern_option), `tests/cli/merge/test_concat.py`
-**Usage:** `audio-playground merge concat --input-dir ./segments --pattern "segment-*.wav" --target result.wav`
-Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for flexible file matching. Automatically detects sample rate from first file.
+**Status:** ✅ Complete - Created `cli/merge/concat.py` wrapping `concatenate_segments()` from `core/merger.py`. Supports glob patterns. Auto-detects sample rate from first file.
 
-### Step 2.4a: Create `extract process-sam-audio` command
+### Step 2.4: Create `extract process-sam-audio` command
 
 - **File:** `audio_playground/cli/extract/process_sam_audio.py` (new)
 - **Responsibility:** Run SAM-Audio model on segment(s)
@@ -90,7 +76,7 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
   - Batch process all segments with model loaded once
 - **Test:** Verify produces `{segment}-target-{prompt}.wav` files for each segment
 
-### Step 2.4b: Create `extract process-demucs` command
+### Step 2.5: Create `extract process-demucs` command
 
 - **File:** `audio_playground/cli/extract/process_demucs.py` (new)
 - **Responsibility:** Run Demucs model on audio file
@@ -101,7 +87,9 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
   - Outputs separated stems to output directory
 - **Test:** Verify produces separated audio stems
 
-### Step 2.4c: PyTorch Performance Optimizations (Platform-Agnostic)
+---
+
+## ⏳ Phase 3: PyTorch Performance Optimizations (Platform-Agnostic)
 
 - **File:** `audio_playground/core/sam_audio_optimizer.py` (new)
 - **Responsibility:** Performance optimizations that work on all platforms (Windows, Linux, Mac, CUDA, CPU)
@@ -197,7 +185,9 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 
 - **Test:** Benchmark before/after on 2-minute audio file; verify crossfade smoothness; test streaming mode
 
-### Step 2.4d: MLX Backend Integration (Apple Silicon Fast Path)
+---
+
+## ⏳ Phase 4: MLX Backend Integration (Apple Silicon Fast Path)
 
 - **Files:**
   - `audio_playground/core/backends/mlx_backend.py` (new)
@@ -342,7 +332,9 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
   - Performance characteristics
   - Troubleshooting common issues
 
-### Step 2.5a: Make `extract sam-audio` a composite command
+---
+
+## ⏳ Phase 5: Make `extract sam-audio` a Composite Command
 
 - **File:** `audio_playground/cli/extract/sam_audio.py`
 - **Change:** Simplify to call the atomic commands in sequence:
@@ -356,7 +348,9 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 - **Benefit:** Users can now manually run individual steps if desired
 - **Test:** Output identical to current behavior
 
-### Step 2.5b: Create `extract demucs` composite command
+---
+
+## ⏳ Phase 6: Create `extract demucs` Composite Command
 
 - **File:** `audio_playground/cli/extract/demucs.py` (new)
 - **Responsibility:** Full Demucs extraction pipeline
@@ -370,7 +364,9 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 - **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
 - **Test:** Verify separated stems are produced
 
-### Step 2.6: Add global config overrides to each command
+---
+
+## ⏳ Phase 7: Add Global Config Overrides to Each Command
 
 - **File:** `audio_playground/cli/common.py` (partially complete)
 - **Status:** ⚠️ Partially complete (basic options done, global config options pending)
@@ -399,49 +395,26 @@ Wraps `concatenate_segments()` from `core/merger.py`. Supports glob patterns for
 - [x] **Step 2.2:** Segment command produces valid output
 - [x] **Step 2.3:** `audio-playground merge concat --help` works
 - [x] **Step 2.3:** Merge command reconstructs audio correctly
-- [ ] **Step 2.4a:** `audio-playground extract process-sam-audio --help` works
-- [ ] **Step 2.4a:** Process command handles single/multiple/glob segments
-- [ ] **Step 2.4b:** `audio-playground extract process-demucs --help` works
-- [ ] **Step 2.4b:** Demucs integration produces separated stems
-- [ ] **Step 2.4c:** PyTorch optimizations implemented (caching, chunking, streaming)
-- [ ] **Step 2.4c:** Benchmark shows expected performance gains
-- [ ] **Step 2.4c:** Crossfade blending produces smooth audio (no artifacts)
-- [ ] **Step 2.4d:** MLX backend auto-detection works on Apple Silicon
-- [ ] **Step 2.4d:** Backend abstraction allows switching PyTorch ↔ MLX
-- [ ] **Step 2.4d:** Fallback to PyTorch on missing MLX dependency
-- [ ] **Step 2.5a:** `extract sam-audio` composite produces same output as current implementation
-- [ ] **Step 2.5b:** `extract demucs` composite works end-to-end
-- [ ] **Step 2.6:** Global config options applied to all commands
+- [ ] **Step 2.4:** `audio-playground extract process-sam-audio --help` works
+- [ ] **Step 2.4:** Process command handles single/multiple/glob segments
+- [ ] **Step 2.5:** `audio-playground extract process-demucs --help` works
+- [ ] **Step 2.5:** Demucs integration produces separated stems
 
-**Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
+**Exit Criteria:** All atomic commands functional
 
-**Next Step:** Implement Step 2.4a (process-sam-audio command)
+**Next Step:** Implement Step 2.4 (process-sam-audio command)
 
-### Additional Improvements (Phase 2)
+### Additional Improvements
 
-**CI/CD Enhancements:**
+**CI/CD Enhancements:** ✅ Complete
 
-- ✅ GitHub Actions workflow for automated QA checks
-  - Runs `task qa` on all pushes and PRs
-  - Blocks PR merge if QA fails
-  - Installs all dependencies (conda, PyTorch, dev deps)
-- ✅ Coverage badge generation
-  - Auto-generated on main branch pushes
-  - Stored in `badges` branch
-  - Embeddable in README
-- ✅ Coverage artifact upload
-  - HTML coverage reports available for download
-  - 7-day retention
-  - Runs even on test failures
-
-**Files Added:**
-
-- `.github/workflows/qa.yml` - CI/CD workflow
-- `.github/COVERAGE_BADGE.md` - Badge usage documentation
+- GitHub Actions workflow for automated QA checks (runs `task qa` on all pushes/PRs)
+- Coverage badge generation (auto-generated on main branch pushes, stored in `badges` branch)
+- Coverage artifact upload (HTML reports with 7-day retention)
 
 ---
 
-## ⏳ Phase 3: Lazy Caching & Artifact Reuse
+## ⏳ Phase 8: Lazy Caching & Artifact Reuse
 
 ### Goal
 
@@ -569,7 +542,7 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 ---
 
-## ⏳ Phase 4: YAML Runner & Workflows
+## ⏳ Phase 9: YAML Runner & Workflows
 
 ### Goal
 
@@ -661,7 +634,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 ---
 
-## ⏳ Phase 5: Testing & Coverage
+## ⏳ Phase 10: Testing & Coverage
 
 ### Goal
 
@@ -733,26 +706,23 @@ def test_split_to_files_creates_segments(tmp_path):
 ## Implementation Order (Recommended)
 
 ```
-Week 1:
+✅ Completed:
 ├─ Phase 0: Add --chain-residuals flag
-└─ Phase 1.1-1.4: Extract core modules (WavConverter, Segmenter, Merger)
+├─ Phase 1: Modularization & Lazy Imports
+└─ Phase 2.1-2.3: Atomic commands (convert, segment, merge)
 
-Week 2:
-├─ Phase 1.5-1.7: Refactor sam_audio.py + lazy imports
-└─ Phase 5.1: Write unit tests for core modules
+🚧 In Progress:
+└─ Phase 2.4-2.5: Model processing commands (sam-audio, demucs)
 
-Week 3:
-├─ Phase 2.1-2.3: Create atomic commands (convert, segment, merge)
-└─ Phase 2.4-2.6: Refactor extract as composite
-
-Week 4:
-├─ Phase 3.1-3.3: Implement caching
-├─ Phase 3.4-3.5: Cache management commands
-└─ Phase 5.2: Integration tests
-
-Week 5:
-├─ Phase 4.1-4.5: YAML runner + workflows
-└─ Phase 5.3-5.4: Regression + coverage
+⏳ Upcoming:
+├─ Phase 3: PyTorch Performance Optimizations
+├─ Phase 4: MLX Backend Integration
+├─ Phase 5: Make extract sam-audio composite
+├─ Phase 6: Create extract demucs composite
+├─ Phase 7: Global config overrides
+├─ Phase 8: Caching implementation
+├─ Phase 9: YAML runner + workflows
+└─ Phase 10: Testing & coverage (>=95%)
 ```
 
 ---
