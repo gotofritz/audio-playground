@@ -116,37 +116,37 @@ def process_audio_with_demucs(
 @click.option(
     "--model",
     type=str,
-    default="htdemucs_ft",
-    help="Demucs model to use. Default: htdemucs_ft (fine-tuned model).",
+    default=None,
+    help="Demucs model to use. If not specified, uses config default.",
 )
 @click.option(
     "--device",
     type=str,
-    default="auto",
-    help="Device to use (auto, cpu, cuda). Default: auto (detect best available).",
+    default=None,
+    help="Device to use (auto, cpu, cuda). If not specified, uses config default.",
 )
 @click.option(
     "--shifts",
     type=int,
-    default=6,
-    help="Number of random shifts for equivariant stabilization. Default: 6.",
+    default=None,
+    help="Number of random shifts for equivariant stabilization. If not specified, uses config default.",
 )
 @click.option(
     "--num-workers",
     "-j",
     type=int,
-    default=4,
-    help="Number of worker threads. Default: 4.",
+    default=None,
+    help="Number of worker threads. If not specified, uses config default.",
 )
 @click.pass_context
 def process_demucs(
     ctx: click.Context,
     src: Path,
     output_dir: Path,
-    model: str,
-    device: str,
-    shifts: int,
-    num_workers: int,
+    model: str | None,
+    device: str | None,
+    shifts: int | None,
+    num_workers: int | None,
 ) -> None:
     """
     Process audio file with Demucs model to separate stems.
@@ -180,9 +180,16 @@ def process_demucs(
     try:
         app_context: AppContext = ctx.obj
         logger = app_context.logger
+        config = app_context.config
+
+        # Use config defaults for any unspecified options
+        model_name = model if model is not None else config.demucs_model
+        device_value = device if device is not None else config.device
+        shifts_value = shifts if shifts is not None else config.demucs_shifts
+        num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
 
         # Determine device
-        if device == "auto":
+        if device_value == "auto":
             import torch
 
             accelerator = (
@@ -190,24 +197,24 @@ def process_demucs(
                 if torch.accelerator.is_available()
                 else None
             )
-            device = accelerator.type if accelerator is not None else "cpu"
-            logger.info(f"Auto-detected device: {device}")
+            device_value = accelerator.type if accelerator is not None else "cpu"
+            logger.info(f"Auto-detected device: {device_value}")
 
         # Log configuration
         logger.info(f"Source file: {src}")
         logger.info(f"Output directory: {output_dir}")
-        logger.info(f"Model: {model}")
-        logger.info(f"Shifts: {shifts}")
-        logger.info(f"Workers: {num_workers}")
+        logger.info(f"Model: {model_name}")
+        logger.info(f"Shifts: {shifts_value}")
+        logger.info(f"Workers: {num_workers_value}")
 
         # Process audio
         process_audio_with_demucs(
             audio_path=src,
             output_dir=output_dir,
-            model_name=model,
-            device=device,
-            shifts=shifts,
-            num_workers=num_workers,
+            model_name=model_name,
+            device=device_value,
+            shifts=shifts_value,
+            num_workers=num_workers_value,
             logger=logger,
         )
 
