@@ -4,7 +4,7 @@
 
 Transform the monolithic `extract sam-audio` command into a modular, testable, cacheable toolkit while maintaining backward compatibility.
 
-**Total Phases:** 5
+**Total Phases:** 8
 **Estimated Effort:** ~40-50 incremental changes
 **Testing Target:** >=95% coverage by end
 
@@ -20,6 +20,9 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 - ⏳ Phase 3: Not Started
 - ⏳ Phase 4: Not Started
 - ⏳ Phase 5: Not Started
+- ⏳ Phase 6: Not Started
+- ⏳ Phase 7: Not Started
+- ⏳ Phase 8: Not Started
 
 ---
 
@@ -82,7 +85,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Outputs separated stems to output directory
 - **Test:** Verify produces separated audio stems
 
-### Step 2.6: PyTorch Performance Optimizations (Platform-Agnostic)
+---
+
+## ⏳ Phase 3: PyTorch Performance Optimizations (Platform-Agnostic)
 
 - **File:** `audio_playground/core/sam_audio_optimizer.py` (new)
 - **Responsibility:** Performance optimizations that work on all platforms (Windows, Linux, Mac, CUDA, CPU)
@@ -186,7 +191,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 - **Test:** Benchmark before/after on 2-minute audio file; verify crossfade smoothness; test streaming mode
 
-### Step 2.7: MLX Backend Integration (Apple Silicon Fast Path)
+---
+
+## ⏳ Phase 4: MLX Backend Integration (Apple Silicon Fast Path)
 
 - **Files:**
   - `audio_playground/core/backends/mlx_backend.py` (new)
@@ -341,7 +348,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
   - Performance characteristics
   - Troubleshooting common issues
 
-### Step 2.8: Make `extract sam-audio` a Composite Command
+### Step 2.6: Make `extract sam-audio` a Composite Command
 
 - **File:** `audio_playground/cli/extract/sam_audio.py`
 - **Change:** Simplify to call the atomic commands in sequence:
@@ -355,7 +362,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Benefit:** Users can now manually run individual steps if desired
 - **Test:** Output identical to current behavior
 
-### Step 2.9: Create `extract demucs` Composite Command
+### Step 2.7: Create `extract demucs` Composite Command
 
 - **File:** `audio_playground/cli/extract/demucs.py` (new)
 - **Responsibility:** Full Demucs extraction pipeline
@@ -369,7 +376,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - **Benefit:** Simplified pipeline for Demucs (no segmentation needed)
 - **Test:** Verify separated stems are produced
 
-### Step 2.10: Add Global Config Overrides to Each Command
+---
+
+## ⏳ Phase 5: Add Global Config Overrides to Each Command
 
 - **File:** `audio_playground/cli/common.py` (partially complete)
 - **Status:** ⚠️ Partially complete (basic options done, global config options pending)
@@ -402,15 +411,15 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [ ] **Step 2.4:** Process command handles single/multiple/glob segments
 - [ ] **Step 2.5:** `audio-playground extract process-demucs --help` works
 - [ ] **Step 2.5:** Demucs integration produces separated stems
-- [ ] **Step 2.6:** PyTorch optimizations implemented (caching, chunking, streaming)
-- [ ] **Step 2.6:** Benchmark shows expected performance gains
-- [ ] **Step 2.6:** Crossfade blending produces smooth audio (no artifacts)
-- [ ] **Step 2.7:** MLX backend auto-detection works on Apple Silicon
-- [ ] **Step 2.7:** Backend abstraction allows switching PyTorch ↔ MLX
-- [ ] **Step 2.7:** Fallback to PyTorch on missing MLX dependency
-- [ ] **Step 2.8:** `extract sam-audio` composite produces same output as current implementation
-- [ ] **Step 2.9:** `extract demucs` composite works end-to-end
-- [ ] **Step 2.10:** Global config options applied to all commands
+- [ ] **Step 2.6:** `extract sam-audio` composite produces same output as current implementation
+- [ ] **Step 2.7:** `extract demucs` composite works end-to-end
+- [ ] **Phase 3:** PyTorch optimizations implemented (caching, chunking, streaming)
+- [ ] **Phase 3:** Benchmark shows expected performance gains
+- [ ] **Phase 3:** Crossfade blending produces smooth audio (no artifacts)
+- [ ] **Phase 4:** MLX backend auto-detection works on Apple Silicon
+- [ ] **Phase 4:** Backend abstraction allows switching PyTorch ↔ MLX
+- [ ] **Phase 4:** Fallback to PyTorch on missing MLX dependency
+- [ ] **Phase 5:** Global config options applied to all commands
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
@@ -426,7 +435,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 ---
 
-## ⏳ Phase 3: Lazy Caching & Artifact Reuse
+## ⏳ Phase 6: Lazy Caching & Artifact Reuse
 
 ### Goal
 
@@ -554,7 +563,7 @@ Avoid re-processing identical inputs by caching segment files and metadata.
 
 ---
 
-## ⏳ Phase 4: YAML Runner & Workflows
+## ⏳ Phase 7: YAML Runner & Workflows
 
 ### Goal
 
@@ -646,7 +655,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 ---
 
-## ⏳ Phase 5: Testing & Coverage
+## ⏳ Phase 8: Testing & Coverage
 
 ### Goal
 
@@ -724,19 +733,19 @@ def test_split_to_files_creates_segments(tmp_path):
 └─ Phase 2.1-2.3: Atomic commands (convert, segment, merge)
 
 🚧 In Progress:
-└─ Phase 2.4-2.10: Complete atomic CLI commands
+└─ Phase 2.4-2.7: Complete atomic CLI commands
    ├─ 2.4: process-sam-audio (in progress)
    ├─ 2.5: process-demucs
-   ├─ 2.6: PyTorch optimizations
-   ├─ 2.7: MLX backend
-   ├─ 2.8: extract sam-audio composite
-   ├─ 2.9: extract demucs composite
-   └─ 2.10: Global config overrides
+   ├─ 2.6: extract sam-audio composite
+   └─ 2.7: extract demucs composite
 
 ⏳ Upcoming:
-├─ Phase 3: Caching implementation
-├─ Phase 4: YAML runner + workflows
-└─ Phase 5: Testing & coverage (>=95%)
+├─ Phase 3: PyTorch Performance Optimizations
+├─ Phase 4: MLX Backend Integration
+├─ Phase 5: Global config overrides
+├─ Phase 6: Caching implementation
+├─ Phase 7: YAML runner + workflows
+└─ Phase 8: Testing & coverage (>=95%)
 ```
 
 ---
