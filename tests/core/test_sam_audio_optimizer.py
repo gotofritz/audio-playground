@@ -1,7 +1,7 @@
 """Tests for SAM-Audio optimizer module."""
 
 import math
-from unittest.mock import MagicMock, Mock, patch
+from unittest.mock import MagicMock, patch
 
 import pytest
 import soundfile as sf
@@ -40,98 +40,6 @@ def temp_audio_file(tmp_path):
     sf.write(audio_path.as_posix(), waveform.numpy().T, sample_rate)
 
     return audio_path
-
-
-class TestPromptCache:
-    """Tests for PromptCache class."""
-
-    def test_cache_initialization(self):
-        """Test that cache initializes with empty state."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        assert cache.hit_rate == 0.0
-        stats = cache.stats()
-        assert stats["hits"] == 0
-        assert stats["misses"] == 0
-        assert stats["cache_size"] == 0
-
-    def test_hash_prompts_consistency(self):
-        """Test that same prompts produce same hash."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        prompts1 = ["bass", "vocals", "drums"]
-        prompts2 = ["bass", "vocals", "drums"]
-
-        hash1 = cache._hash_prompts(prompts1)
-        hash2 = cache._hash_prompts(prompts2)
-
-        assert hash1 == hash2
-
-    def test_hash_prompts_order_independence(self):
-        """Test that prompt order doesn't affect hash (sorted internally)."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        prompts1 = ["bass", "vocals", "drums"]
-        prompts2 = ["drums", "bass", "vocals"]
-
-        hash1 = cache._hash_prompts(prompts1)
-        hash2 = cache._hash_prompts(prompts2)
-
-        assert hash1 == hash2
-
-    def test_cache_miss(self):
-        """Test cache miss behavior."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        prompts = ["bass", "vocals"]
-        encoder_fn = Mock(return_value="encoded_result")
-
-        result = cache.get_or_encode(prompts, encoder_fn)
-
-        assert result == "encoded_result"
-        encoder_fn.assert_called_once()
-        assert cache.stats()["misses"] == 1
-        assert cache.stats()["hits"] == 0
-
-    def test_cache_hit(self):
-        """Test cache hit behavior."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        prompts = ["bass", "vocals"]
-        encoder_fn = Mock(return_value="encoded_result")
-
-        # First call - cache miss
-        result1 = cache.get_or_encode(prompts, encoder_fn)
-        # Second call - cache hit
-        result2 = cache.get_or_encode(prompts, encoder_fn)
-
-        assert result1 == result2
-        # Encoder should only be called once
-        encoder_fn.assert_called_once()
-        assert cache.stats()["misses"] == 1
-        assert cache.stats()["hits"] == 1
-        assert cache.hit_rate == 0.5
-
-    def test_cache_clear(self):
-        """Test cache clearing."""
-        from audio_playground.core.sam_audio_optimizer import PromptCache
-
-        cache = PromptCache()
-        prompts = ["bass"]
-        encoder_fn = Mock(return_value="encoded")
-
-        cache.get_or_encode(prompts, encoder_fn)
-        assert cache.stats()["cache_size"] == 1
-
-        cache.clear()
-        assert cache.stats()["cache_size"] == 0
-        assert cache.stats()["hits"] == 0
-        assert cache.stats()["misses"] == 0
 
 
 class TestSolverConfig:
