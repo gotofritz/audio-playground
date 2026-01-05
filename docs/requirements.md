@@ -42,8 +42,8 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ### Goal
 
-Break `extract sam-audio` into reusable commands: `convert`, `segment`, `process-sam-audio`, `process-demucs`, `merge`.
-Support both SAM-Audio and Demucs models with model-specific processing commands.
+Break `extract sam-audio` into reusable commands: `convert`, `segment`, `merge`.
+Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process-demucs` commands were created but later removed in Phase 4 refactoring when chunking was moved into the optimizer.
 
 ### Step 2.1: Create `convert` command ✅
 
@@ -57,41 +57,42 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 
 **Status:** ✅ Complete - Created `cli/merge/concat.py` wrapping `concatenate_segments()` from `core/merger.py`. Supports glob patterns. Auto-detects sample rate from first file.
 
-### Step 2.4: Create `extract process-sam-audio` command ✅
+### Step 2.4: Create `extract process-sam-audio` command ✅ [DEPRECATED]
 
-**Status:** ✅ Complete - Created `cli/extract/process_sam_audio.py` for processing audio segments with SAM-Audio model. Supports multiple segments, glob patterns, and batch processing. Outputs `{segment}-{prompt}.wav` files (suffix applied at merge step).
+**Status:** ⚠️ Deprecated - Originally created `cli/extract/process_sam_audio.py` for processing audio segments. This command was removed in Phase 4 architectural refactoring when file-based segmentation was replaced with in-memory chunking in the optimizer.
 
-### Step 2.5: Create `extract process-demucs` command ✅
+### Step 2.5: Create `extract process-demucs` command ✅ [DEPRECATED]
 
-**Status:** ✅ Complete - Created `cli/extract/process_demucs.py` for Demucs model processing. Supports single audio file input with stem separation (no segmentation needed). Outputs separated stems (drums, bass, other, vocals). Includes progress bar support and configurable parameters via app_config (model, shifts, workers).
+**Status:** ⚠️ Deprecated - Originally created `cli/extract/process_demucs.py`. The processing logic was moved to `core/demucs_processor.py` and the CLI command was removed in Phase 4 refactoring.
 
 ### Step 2.6: Make `extract sam-audio` a Composite Command ✅
 
-**Status:** ✅ Complete - Refactored `extract sam-audio` as a composite command orchestrating atomic steps: convert to-wav → segment split → process-sam-audio → merge concat. Users can now run individual steps manually if desired.
+**Status:** ✅ Complete - Refactored `extract sam-audio` to directly call the optimizer without intermediate file-based segmentation. Workflow simplified from 4 steps (convert → segment → process → merge) to 3 steps (convert → process with chunking → save). The optimizer handles chunking internally.
 
 ### Step 2.7: Create `extract demucs` Composite Command ✅
 
-**Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command for full Demucs pipeline: convert to-wav → process-demucs. Simplified workflow (no segmentation needed) for stem separation.
+**Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command for full Demucs pipeline: convert to-wav → process with demucs (using core/demucs_processor.py). Simplified workflow for stem separation.
 
 ## ✅ Phase 3: Restructure to src Layout
 
 **Status:** ✅ Complete - Moved `audio_playground/` to `src/audio_playground/`. Updated `pyproject.toml` with `where = ["src"]`. Replaced mypy with ty for type checking.
 
-## ✅ Phase 4: PyTorch Performance Optimizations (Platform-Agnostic)
+## ✅ Phase 4: PyTorch Performance Optimizations & Architectural Refactoring
 
-**Status:** ✅ Complete - Implemented platform-agnostic performance optimizations including prompt caching, chunked processing with crossfade, streaming mode, configurable ODE solvers, and memory management utilities.
+**Status:** ✅ Complete - Implemented platform-agnostic performance optimizations and eliminated redundant two-level chunking architecture.
 
 **Implementation Summary:**
 
 - ✅ Created `src/audio_playground/core/sam_audio_optimizer.py` with all optimization features
-- ✅ **Text Feature Caching:** `PromptCache` class caches text embeddings to avoid re-encoding (20-30% speedup for multi-segment processing)
+- ✅ **Text Feature Caching:** `PromptCache` class caches text embeddings to avoid re-encoding (20-30% speedup for multi-prompt processing)
 - ✅ **Chunked Processing:** `process_long_audio()` processes long audio files in overlapping chunks with cosine/linear crossfade to avoid artifacts
 - ✅ **Streaming Mode:** `process_streaming()` yields chunks as ready, enabling progress monitoring and faster first results
 - ✅ **Configurable ODE Solvers:** `SolverConfig` dataclass allows trading quality for speed (euler=faster, midpoint=higher quality)
 - ✅ **Memory Management:** `clear_caches()` and `get_memory_stats()` utilities for explicit cache clearing and monitoring
-- ✅ Updated `app_config.py` with performance optimization settings (enable_prompt_caching, chunk_duration, chunk_overlap, crossfade_type, ode_solver, ode_steps, streaming_mode)
-- ✅ Added CLI options to `extract process-sam-audio` command: `--streaming`, `--solver`, `--solver-steps`, `--chunk-duration`, `--chunk-overlap`, `--crossfade-type`, `--no-prompt-cache`
-- ✅ Integrated optimizer into `process_segments_with_sam_audio()` function
+- ✅ Updated `app_config.py` with performance optimization settings (enable_prompt_caching, chunk_duration, chunk_overlap, crossfade_type, ode_solver, ode_steps)
+- ✅ Added CLI options to `extract sam-audio` command: `--no-chunks`, `--solver`, `--solver-steps`, `--chunk-duration`, `--chunk-overlap`, `--crossfade-type`, `--no-prompt-cache`
+- ✅ **Architectural Refactoring:** Eliminated file-based segmentation in favor of direct optimizer integration. Removed redundant `process-sam-audio` and `process-demucs` CLI commands. Moved Demucs processing logic to `core/demucs_processor.py`.
+- ✅ **Performance Reporting:** Added `PerformanceTracker` for automatic performance metrics (time, memory, speedup) saved as YAML reports
 - ✅ Created comprehensive test suite in `tests/core/test_sam_audio_optimizer.py`
 
 **Performance Benefits:**
@@ -288,11 +289,11 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Step 2.2:** Segment command produces valid output
 - [x] **Step 2.3:** `audio-playground merge concat --help` works
 - [x] **Step 2.3:** Merge command reconstructs audio correctly
-- [x] **Step 2.4:** `audio-playground extract process-sam-audio --help` works
-- [x] **Step 2.4:** Process command handles single/multiple/glob segments
-- [x] **Step 2.5:** `audio-playground extract process-demucs --help` works
-- [x] **Step 2.5:** Demucs integration produces separated stems
-- [x] **Step 2.6:** `extract sam-audio` composite command implemented
+- [x] **Step 2.4:** ⚠️ Deprecated - Command removed in Phase 4 refactoring
+- [x] **Step 2.4:** ⚠️ Deprecated - Functionality moved to optimizer
+- [x] **Step 2.5:** ⚠️ Deprecated - Command removed in Phase 4 refactoring
+- [x] **Step 2.5:** ⚠️ Deprecated - Logic moved to core/demucs_processor.py
+- [x] **Step 2.6:** `extract sam-audio` composite command implemented (refactored to use optimizer directly)
 - [x] **Step 2.7:** `extract demucs` composite command implemented
 - [x] **Phase 3:** Restructured to src layout
 - [x] **Phase 3:** Updated pyproject.toml with src configuration
@@ -300,7 +301,9 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - [x] **Phase 4:** PyTorch optimizations implemented (caching, chunking, streaming)
 - [x] **Phase 4:** Created sam_audio_optimizer.py with all optimization features
 - [x] **Phase 4:** Updated app_config.py with performance settings
-- [x] **Phase 4:** Added CLI options to extract process-sam-audio
+- [x] **Phase 4:** Added CLI options to extract sam-audio (removed process-sam-audio command)
+- [x] **Phase 4:** Architectural refactoring - eliminated file-based segmentation
+- [x] **Phase 4:** Created PerformanceTracker for automatic metrics reporting
 - [x] **Phase 4:** Created comprehensive test suite
 - [ ] **Phase 5:** MLX backend auto-detection works on Apple Silicon
 - [ ] **Phase 5:** Backend abstraction allows switching PyTorch ↔ MLX
@@ -623,15 +626,20 @@ def test_split_to_files_creates_segments(tmp_path):
 ✅ Completed:
 ├─ Phase 0: Add --chain-residuals flag
 ├─ Phase 1: Modularization & Lazy Imports
-├─ Phase 2: Atomic CLI Commands (All steps complete)
+├─ Phase 2: Atomic CLI Commands
 │  ├─ 2.1: convert to-wav
 │  ├─ 2.2: segment split
 │  ├─ 2.3: merge concat
-│  ├─ 2.4: extract process-sam-audio
-│  ├─ 2.5: extract process-demucs
-│  ├─ 2.6: extract sam-audio composite
+│  ├─ 2.4: extract process-sam-audio [DEPRECATED - removed in Phase 4]
+│  ├─ 2.5: extract process-demucs [DEPRECATED - removed in Phase 4]
+│  ├─ 2.6: extract sam-audio composite (refactored to use optimizer directly)
 │  └─ 2.7: extract demucs composite
-└─ Phase 3: Restructure to src layout
+├─ Phase 3: Restructure to src layout
+└─ Phase 4: PyTorch Optimizations & Architectural Refactoring
+   ├─ Created sam_audio_optimizer.py (caching, chunking, streaming)
+   ├─ Eliminated file-based segmentation (moved to in-memory chunking)
+   ├─ Removed process-* CLI commands (logic moved to core modules)
+   └─ Added PerformanceTracker for automatic metrics reporting
 
 ⏳ Upcoming:
 ├─ Phase 5: MLX Backend Integration (next)
