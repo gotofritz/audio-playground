@@ -3,7 +3,7 @@
 import math
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, Optional
+from typing import Any, Optional
 
 import torch
 from core.audio_visual_encoder import PEAudioFrame, PEAudioFrameTransform
@@ -226,7 +226,7 @@ class SAMAudio(BaseModel):
         self,
         batch: Batch,
         noise: Optional[torch.Tensor] = None,
-        ode_opt: Dict[str, Any] = DFLT_ODE_OPT,
+        ode_opt: dict[str, Any] = DFLT_ODE_OPT,
         reranking_candidates: int = 1,
         predict_spans: bool = False,
     ) -> SeparationResult:

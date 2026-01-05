@@ -2,7 +2,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Tuple, Union
+from typing import Optional
 
 import mlx.core as mx
 import numpy as np
@@ -11,10 +11,10 @@ from huggingface_hub import snapshot_download
 from .config import DACVAEConfig
 
 # Type alias for anchor format: (token, start_time, end_time)
-Anchor = Tuple[str, float, float]
+Anchor = tuple[str, float, float]
 
 
-def load_audio(audio_path: str, target_sr: int = 48000) -> Tuple[np.ndarray, int]:
+def load_audio(audio_path: str, target_sr: int = 48000) -> tuple[np.ndarray, int]:
     """
     Load audio file and resample if needed.
 
@@ -84,9 +84,9 @@ def load_audio(audio_path: str, target_sr: int = 48000) -> Tuple[np.ndarray, int
 
 
 def batch_audio(
-    audios: List[Union[str, np.ndarray, mx.array]],
+    audios: list[str | np.ndarray | mx.array],
     audio_sampling_rate: int = 48_000,
-) -> Tuple[mx.array, mx.array]:
+) -> tuple[mx.array, mx.array]:
     """
     Batch multiple audio samples with padding.
 
@@ -173,7 +173,7 @@ class Batch:
     audios: mx.array
     sizes: mx.array
     wav_sizes: mx.array
-    descriptions: List[str]
+    descriptions: list[str]
     anchor_ids: mx.array
     anchor_alignment: mx.array
     audio_pad_mask: Optional[mx.array] = None
@@ -236,13 +236,13 @@ class SAMAudioProcessor:
             audio_sampling_rate=codec_config.sample_rate,
         )
 
-    def wav_to_feature_idx(self, wav_idx: Union[int, mx.array]) -> Union[int, mx.array]:
+    def wav_to_feature_idx(self, wav_idx: int | mx.array) -> int | mx.array:
         """Convert waveform index to feature index."""
         if isinstance(wav_idx, mx.array):
             return mx.ceil(wav_idx / self.audio_hop_length).astype(mx.int32)
         return math.ceil(wav_idx / self.audio_hop_length)
 
-    def feature_to_wav_idx(self, feature_idx: Union[int, mx.array]) -> Union[int, mx.array]:
+    def feature_to_wav_idx(self, feature_idx: int | mx.array) -> int | mx.array:
         """Convert feature index to waveform index."""
         if isinstance(feature_idx, mx.array):
             return (feature_idx * self.audio_hop_length).astype(mx.int32)
@@ -250,10 +250,10 @@ class SAMAudioProcessor:
 
     def _process_anchors(
         self,
-        anchors: Optional[List[List[Anchor]]],
+        anchors: Optional[list[list[Anchor]]],
         audio_pad_mask: mx.array,
         batch_size: int,
-    ) -> Tuple[mx.array, mx.array]:
+    ) -> tuple[mx.array, mx.array]:
         """
         Process temporal anchors into IDs and alignments.
 
@@ -321,9 +321,9 @@ class SAMAudioProcessor:
 
     def __call__(
         self,
-        descriptions: List[str],
-        audios: List[Union[str, np.ndarray, mx.array]],
-        anchors: Optional[List[List[Anchor]]] = None,
+        descriptions: list[str],
+        audios: list[str | np.ndarray | mx.array],
+        anchors: Optional[list[list[Anchor]]] = None,
     ) -> Batch:
         """
         Process inputs for SAM-Audio.
@@ -380,7 +380,7 @@ class SAMAudioProcessor:
 
 
 def save_audio(
-    audio: Union[mx.array, np.ndarray],
+    audio: mx.array | np.ndarray,
     path: str,
     sample_rate: int = 48000,
 ):

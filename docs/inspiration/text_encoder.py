@@ -1,6 +1,6 @@
 import math
 from dataclasses import dataclass
-from typing import Dict, List, Optional, Tuple
+from typing import Optional
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -225,7 +225,7 @@ class T5Attention(nn.Module):
         hidden_states: mx.array,
         mask: Optional[mx.array] = None,
         position_bias: Optional[mx.array] = None,
-    ) -> Tuple[mx.array, Optional[mx.array]]:
+    ) -> tuple[mx.array, Optional[mx.array]]:
         """
         Forward pass for T5 attention.
 
@@ -306,7 +306,7 @@ class T5LayerSelfAttention(nn.Module):
         hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
         position_bias: Optional[mx.array] = None,
-    ) -> Tuple[mx.array, Optional[mx.array]]:
+    ) -> tuple[mx.array, Optional[mx.array]]:
         normed_hidden_states = self.layer_norm(hidden_states)
         attention_output, position_bias = self.SelfAttention(
             normed_hidden_states,
@@ -332,7 +332,7 @@ class T5Block(nn.Module):
         hidden_states: mx.array,
         attention_mask: Optional[mx.array] = None,
         position_bias: Optional[mx.array] = None,
-    ) -> Tuple[mx.array, Optional[mx.array]]:
+    ) -> tuple[mx.array, Optional[mx.array]]:
         # Self-attention
         hidden_states, position_bias = self.layer[0](
             hidden_states,
@@ -439,7 +439,7 @@ class T5Encoder(nn.Module):
         return self.encoder(input_ids=input_ids, attention_mask=attention_mask)
 
     @staticmethod
-    def sanitize(weights: Dict[str, mx.array], prefix: str = "") -> Dict[str, mx.array]:
+    def sanitize(weights: dict[str, mx.array], prefix: str = "") -> dict[str, mx.array]:
         """
         Sanitize T5 weights for MLX loading.
 
@@ -556,7 +556,7 @@ class T5TextEncoder:
             # Load MLX T5 model from HuggingFace
             self.model = T5Encoder.from_pretrained(self.config.name)
 
-    def __call__(self, texts: List[str]) -> Tuple[mx.array, mx.array]:
+    def __call__(self, texts: list[str]) -> tuple[mx.array, mx.array]:
         """
         Encode text descriptions.
 

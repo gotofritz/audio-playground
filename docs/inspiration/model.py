@@ -3,7 +3,7 @@ import json
 import math
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Optional
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -81,8 +81,8 @@ class SinusoidalEmbedding(nn.Module):
 class SeparationResult:
     """Result of audio separation."""
 
-    target: List[mx.array]  # Separated target audio(s)
-    residual: List[mx.array]  # Residual/background audio(s)
+    target: list[mx.array]  # Separated target audio(s)
+    residual: list[mx.array]  # Residual/background audio(s)
     noise: mx.array  # Initial noise used for generation
     peak_memory: float  # Peak memory usage in GB
 
@@ -132,7 +132,7 @@ class SAMAudio(nn.Module):
         return self.audio_codec.sample_rate
 
     @staticmethod
-    def sanitize(weights: Dict[str, mx.array]) -> Dict[str, mx.array]:
+    def sanitize(weights: dict[str, mx.array]) -> dict[str, mx.array]:
         """
         Sanitize PyTorch weights for MLX loading.
 
@@ -366,13 +366,13 @@ class SAMAudio(nn.Module):
     def separate(
         self,
         audios: mx.array,
-        descriptions: List[str],
+        descriptions: list[str],
         sizes: Optional[mx.array] = None,
         anchor_ids: Optional[mx.array] = None,
         anchor_alignment: Optional[mx.array] = None,
         audio_pad_mask: Optional[mx.array] = None,
         noise: Optional[mx.array] = None,
-        ode_opt: Dict[str, Any] = None,
+        ode_opt: dict[str, Any] = None,
         ode_decode_chunk_size: Optional[int] = None,  # Set it to 50 for better performance
         _text_features: Optional[mx.array] = None,
         _text_mask: Optional[mx.array] = None,
@@ -503,12 +503,12 @@ class SAMAudio(nn.Module):
     def separate_long(
         self,
         audios: mx.array,
-        descriptions: List[str],
+        descriptions: list[str],
         chunk_seconds: float = 10.0,
         overlap_seconds: float = 3.0,
         anchor_ids: Optional[mx.array] = None,
         anchor_alignment: Optional[mx.array] = None,
-        ode_opt: Dict[str, Any] = None,
+        ode_opt: dict[str, Any] = None,
         ode_decode_chunk_size: Optional[int] = None,
         seed: int = 42,
         verbose: bool = False,

@@ -1,5 +1,4 @@
 import math
-from typing import Tuple
 
 import mlx.core as mx
 import mlx.nn as nn
@@ -7,7 +6,7 @@ import mlx.nn as nn
 
 def pad1d(
     x: mx.array,
-    paddings: Tuple[int, int],
+    paddings: tuple[int, int],
     mode: str = "constant",
     value: float = 0.0,
 ) -> mx.array:
