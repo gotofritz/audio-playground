@@ -16,6 +16,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Literal
 
+from audio_playground.core.segmenter import calculate_chunk_boundaries
+
 logger = logging.getLogger(__name__)
 
 
@@ -144,9 +146,6 @@ def process_long_audio(
 
         # Move to CPU before returning (MPS doesn't support torchaudio.save)
         return {prompt: result.target[i].cpu() for i, prompt in enumerate(prompts)}
-
-    # Use canonical chunking calculation from segmenter
-    from audio_playground.core.segmenter import calculate_chunk_boundaries
 
     boundaries = calculate_chunk_boundaries(
         total_frames=info.frames,
