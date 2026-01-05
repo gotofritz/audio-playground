@@ -47,7 +47,7 @@ def split(
         - etc.
     """
     logger = app_context.logger
-    config = app_context.config
+    config = app_context.app_config
 
     # Use defaults from config if not specified
     if chunk_duration is None:
@@ -56,7 +56,9 @@ def split(
         overlap_duration = config.chunk_overlap
 
     click.echo(f"Splitting {src} into overlapping chunks...")
-    logger.info(f"Splitting {src} with chunk_duration={chunk_duration}s, overlap={overlap_duration}s")
+    logger.info(
+        f"Splitting {src} with chunk_duration={chunk_duration}s, overlap={overlap_duration}s"
+    )
 
     # Get audio duration
     total_duration = load_audio_duration(src)
