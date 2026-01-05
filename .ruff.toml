@@ -26,7 +26,8 @@ exclude = [
   "dist",
   "node_modules",
   "site-packages",
-  "venv"
+  "venv",
+  "docs"
 ]
 # Same as Black.
 line-length = 100
