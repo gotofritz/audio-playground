@@ -207,7 +207,7 @@ def process_long_audio(
         chunk_duration: Duration of each chunk in seconds (default: 30.0)
         overlap_duration: Duration of overlap between chunks in seconds (default: 2.0)
         crossfade_type: Type of crossfade ("cosine" or "linear")
-        solver_config: Optional solver configuration for ODE solver
+        solver_config: Optional solver configuration (NOT YET SUPPORTED by SAMAudio API)
         enable_caching: Whether to enable prompt caching (default: True)
 
     Returns:
@@ -291,15 +291,9 @@ def process_long_audio(
             ).to(device)
 
             with torch.inference_mode():
-                # Apply solver config if provided
-                if solver_config:
-                    result = model.separate(
-                        inputs,
-                        solver_method=solver_config.method,
-                        num_steps=solver_config.steps,
-                    )
-                else:
-                    result = model.separate(inputs)
+                # Note: solver_config is not yet supported by SAMAudio model API
+                # Kept in function signature for future compatibility
+                result = model.separate(inputs)
 
             # Extract results for each prompt
             for i, prompt in enumerate(prompts):
@@ -367,7 +361,7 @@ def process_streaming(
         processor: SAMAudioProcessor instance
         device: Device to use for processing
         chunk_duration: Duration of each chunk in seconds (default: 15.0)
-        solver_config: Optional solver configuration for ODE solver
+        solver_config: Optional solver configuration (NOT YET SUPPORTED by SAMAudio API)
 
     Yields:
         Tuples of (prompt, chunk_audio_tensor, chunk_index)
@@ -416,14 +410,9 @@ def process_streaming(
             ).to(device)
 
             with torch.inference_mode():
-                if solver_config:
-                    result = model.separate(
-                        inputs,
-                        solver_method=solver_config.method,
-                        num_steps=solver_config.steps,
-                    )
-                else:
-                    result = model.separate(inputs)
+                # Note: solver_config is not yet supported by SAMAudio model API
+                # Kept in function signature for future compatibility
+                result = model.separate(inputs)
 
             # Yield results for each prompt
             for i, prompt in enumerate(prompts):
