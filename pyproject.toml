@@ -74,7 +74,6 @@ dependencies = [
   "pydub",
   "rich>=14",
   "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
-  "soundfile>=0.12.1",
   "torch",
   "torchaudio"
 ]

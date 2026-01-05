@@ -23,6 +23,16 @@ class AudioPlaygroundConfig(BaseSettings):
     temp_dir: Path = Path("/tmp/sam_audio_split")
     prompts: list[str] = ["bass"]
 
+    # Segment configuration
+    segment_window_size: float = Field(
+        default=10.0,
+        description="Fixed segment length in seconds. All segments except the last will be this size.",
+    )
+    max_segments: int | None = Field(
+        default=None,
+        description="Maximum number of segments to create (None = no limit). Useful for testing.",
+    )
+
     # Model configuration
     model_item: Model = Model.SMALL
     predict_spans: bool = False
@@ -65,32 +75,6 @@ class AudioPlaygroundConfig(BaseSettings):
     demucs_suffix: str = Field(
         default="demucs",
         description="Suffix for Demucs output files (e.g., 'drums-demucs.wav'). Use empty string for no suffix.",
-    )
-
-    # Performance optimization settings (Phase 4)
-    chunk_duration: float = Field(
-        default=10.0,
-        description="Duration in seconds for chunked processing of long audio files",
-    )
-    chunk_overlap: float = Field(
-        default=2.0,
-        description="Overlap duration in seconds between chunks (for smooth crossfading)",
-    )
-    crossfade_type: Literal["cosine", "linear"] = Field(
-        default="cosine",
-        description="Type of crossfade for blending chunks (cosine=smoother, linear=simpler)",
-    )
-    ode_solver: Literal["euler", "midpoint"] = Field(
-        default="midpoint",
-        description="ODE solver method (euler=faster but lower quality, midpoint=higher quality)",
-    )
-    ode_steps: int = Field(
-        default=32,
-        description="Number of ODE solver steps (lower=faster but lower quality, typical range: 16-64)",
-    )
-    streaming_mode: bool = Field(
-        default=False,
-        description="Enable streaming mode to yield chunks as ready (enables progress monitoring)",
     )
 
     model_config = SettingsConfigDict(

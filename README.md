@@ -86,67 +86,6 @@ Example usage:
 2025-12-24 18:28:30 [INFO] Done. Results saved to ./wav/processed/
 ```
 
-## ⚡ Performance Optimizations
-
-`audio-playground` includes several performance optimizations for SAM-Audio processing (Phase 4):
-
-### Available Options
-
-All optimization options can be configured via CLI flags or environment variables:
-
-| Option | Description | Default |
-|--------|-------------|---------|
-| `--streaming` | Yield chunks as ready for progress monitoring | `False` |
-| `--solver euler\|midpoint` | ODE solver method (euler=faster, midpoint=quality) | `midpoint` |
-| `--solver-steps N` | Number of solver steps (lower=faster, 16-64 range) | `32` |
-| `--chunk-duration N` | Chunk size in seconds for long audio | `30.0` |
-| `--chunk-overlap N` | Overlap duration for smooth crossfade | `2.0` |
-| `--crossfade-type cosine\|linear` | Crossfade method | `cosine` |
-| `--no-prompt-cache` | Disable prompt caching (enabled by default) | - |
-
-### Example: Maximum Speed (2x faster)
-
-Trade some quality for speed using Euler solver with fewer steps:
-
-```sh
-audio-playground extract sam-audio \
-  --src ./input.mp4 \
-  --output-dir ./output \
-  --prompts bass --prompts vocals --prompts drums \
-  --solver euler \
-  --solver-steps 16 \
-  --chunk-duration 20.0
-```
-
-**Expected speedup:** ~2x faster than default
-**Quality impact:** Minimal, suitable for most use cases
-
-### Example: Maximum Quality (slower but best results)
-
-Use midpoint solver with more steps and longer chunks:
-
-```sh
-audio-playground extract sam-audio \
-  --src ./input.mp4 \
-  --output-dir ./output \
-  --prompts bass --prompts vocals --prompts drums \
-  --solver midpoint \
-  --solver-steps 64 \
-  --chunk-duration 45.0 \
-  --crossfade-type cosine
-```
-
-**Quality:** Maximum quality output
-**Speed:** ~50% slower than default
-
-### Performance Features
-
-- **Prompt Caching:** Automatically caches text embeddings for 20-30% speedup on repeated prompts
-- **Chunked Processing:** Enables processing arbitrarily long audio files (no memory limits)
-- **Streaming Mode:** First results available in ~10-15s instead of waiting for full file
-- **Crossfade Blending:** Smooth transitions between chunks (cosine or linear)
-- **Memory Management:** Automatic cache clearing to prevent OOM errors
-
 ### Development Setup
 
 1. **Install pre-commit hooks:**

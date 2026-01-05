@@ -2,16 +2,14 @@
 
 import traceback
 import uuid
-from datetime import datetime
 from pathlib import Path
 
 import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import output_dir_option, src_option, suffix_option
-from audio_playground.core.demucs_processor import process_audio_with_demucs
-from audio_playground.core.performance_tracker import PerformanceTracker
-from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
+from audio_playground.cli.extract.process_demucs import process_audio_with_demucs
+from audio_playground.core.wav_converter import convert_to_wav
 
 
 @click.command(name="demucs")
@@ -118,29 +116,11 @@ def demucs(
         tmp_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Using temp directory: {tmp_path}")
 
-        # Initialize and start performance tracking
-        perf_tracker = PerformanceTracker(
-            source_file=src,
-            output_dir=output_dir,
-            device="auto",  # Will be updated when device is determined
-        )
-        perf_tracker.__enter__()
-
-        # Add metadata about configuration
-        perf_tracker.add_metadata("model", model_name)
-        perf_tracker.add_metadata("shifts", shifts_value)
-        perf_tracker.add_metadata("num_workers", num_workers_value)
-
         # Step 1: Convert to WAV
         logger.info("=== Step 1/2: Converting to WAV ===")
         wav_file = tmp_path / "audio.wav"
         convert_to_wav(src, wav_file)
         logger.info(f"Converted to: {wav_file}")
-
-        # Load audio duration for performance tracking
-        total_duration = load_audio_duration(wav_file)
-        perf_tracker.metrics.audio_duration_seconds = total_duration
-        logger.info(f"Total audio length: {total_duration:.2f} seconds")
 
         # Step 2: Process with Demucs
         logger.info("=== Step 2/2: Processing with Demucs ===")
@@ -156,9 +136,6 @@ def demucs(
             )
             device_value = accelerator.type if accelerator is not None else "cpu"
             logger.info(f"Auto-detected device: {device_value}")
-
-        # Update performance tracker with actual device
-        perf_tracker.metrics.device = device_value
 
         # Ensure output directory exists
         output_dir.mkdir(parents=True, exist_ok=True)
@@ -176,15 +153,8 @@ def demucs(
             show_progress=show_progress,
         )
 
-        # Stop performance tracking and save report
-        perf_tracker.__exit__(None, None, None)
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        report_path = tmp_path / f"report-{timestamp}-demucs.yml"
-        perf_tracker.save_report(report_path, format="yaml")
-
         logger.info("All done!")
         logger.info(f"Separated stems saved to: {output_dir}")
-        logger.info(f"Performance report: {report_path}")
 
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")

@@ -82,6 +82,7 @@ Support both SAM-Audio and Demucs models.
 **Status:** Not Started
 
 **Goals:**
+
 1. Add performance profiling to all CLI commands
 2. Rationalize terminology to use "chunk" consistently throughout the project
 3. Remove deprecated commands
@@ -128,21 +129,26 @@ Support both SAM-Audio and Demucs models.
 **Changes Required:**
 
 **CLI Options:**
+
 - Rename all `--window-size` to `--chunk-duration`
 - Rename all `--segment-*` to `--chunk-*`
 - Update `--max-segments` to `--max-chunks`
+- Rename `segment xxx` command to `chunk xxx`
 
 **Code:**
+
 - Rename `segmenter.py` functions to use "chunk" terminology
 - Update `create_segments()` → `create_chunks()`
 - Update `split_to_files()` to output `chunk-NNN.wav` instead of `segment-NNN.wav`
 - Update variable names: `segment_*` → `chunk_*`
 
 **Documentation:**
+
 - Update all references in docstrings
 - Update README and requirements.md
 
 **Files:**
+
 - `src/audio_playground/core/segmenter.py` → possibly rename to `chunker.py`
 - All CLI commands using segment terminology
 - `docs/requirements.md`
@@ -153,11 +159,13 @@ Support both SAM-Audio and Demucs models.
 **Requirement:** If a command accepts a `--chunk-duration` argument, it should also accept a `--no-chunks` flag to disable chunking entirely.
 
 **Commands Affected:**
-- `segment split`
+
+- `chunk (was segment) split`
 - `extract sam-audio`
 - Any other command that processes audio in chunks
 
 **Implementation:**
+
 - Add `--no-chunks` as a boolean flag
 - When set, process entire audio file without splitting
 - Mutually exclusive with `--chunk-duration`, `--max-chunks`
@@ -167,30 +175,39 @@ Support both SAM-Audio and Demucs models.
 **Requirement:** Add overlap support to chunk-based operations to improve quality at chunk boundaries.
 
 **Commands Affected:**
-- `segment split` (both standalone and as 2nd step of `extract sam-audio`)
+
+- `chunk (was segment) split` (both standalone and as 2nd step of `extract sam-audio`)
 - `merge concat` (both standalone and as final step of `extract sam-audio`)
 
 **New CLI Options:**
+
 - `--overlap-duration FLOAT`: Overlap in seconds between chunks (default: 0.0 = no overlap)
 - `--crossfade-type {linear|cosine}`: Crossfade algorithm for overlap blending (default: cosine)
 
 **Implementation:**
 
-**For `segment split`:**
+**For `chunk (was segment) split`:**
+
 - Calculate overlapping chunk boundaries
 - Save overlapping chunks to files
 - Include overlap metadata in output JSON
 
 **For `merge concat`:**
+
 - Read overlap metadata from input
 - Apply crossfade blending in overlap regions
 - Use cosine or linear fade based on `--crossfade-type`
 
 **Files:**
+
 - `src/audio_playground/core/segmenter.py` - add overlap calculation
 - `src/audio_playground/core/merger.py` - add crossfade blending
 - `src/audio_playground/cli/segment/split.py`
 - `src/audio_playground/cli/merge/concat.py`
+
+**Implementation:**
+
+- Add a test that starts from a 40s .wav file, chunks it into 10 sec windows with 2 seconds overlap, merges it back - the initial and final file should be identical length and pretty much identical content (minimal degradation due to processing is acceptable)
 
 ### Step 4.6: Remove Legacy Arguments
 
@@ -200,6 +217,7 @@ Support both SAM-Audio and Demucs models.
 - Any other deprecated or unused arguments found during refactoring
 
 **Process:**
+
 - Search codebase for `continue_from`
 - Remove from CLI option definitions
 - Remove from function signatures

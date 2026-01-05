@@ -2,16 +2,21 @@
 
 import traceback
 import uuid
-from datetime import datetime
 from pathlib import Path
 
 import click
-import torch
 
 from audio_playground.app_context import AppContext
-from audio_playground.cli.common import output_dir_option, src_option
+from audio_playground.cli.common import (
+    max_segments_option,
+    output_dir_option,
+    src_option,
+    window_size_option,
+)
+from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
-from audio_playground.core.performance_tracker import PerformanceTracker
+from audio_playground.core.merger import concatenate_segments
+from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
 
@@ -23,6 +28,11 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
     multiple=True,
     type=str,
     help="Text prompts to separate. Overrides config.",
+)
+@click.option(
+    "--continue-from",
+    type=click.Path(exists=True),
+    help="Continue from existing temp directory (skip conversion/segmentation).",
 )
 @click.option(
     "--model",
@@ -39,111 +49,134 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
     type=int,
     help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
 )
-@click.option(
-    "--solver",
-    type=click.Choice(["euler", "midpoint"]),
-    help="ODE solver method: 'euler' (2x faster) or 'midpoint' (higher quality, default).",
-)
-@click.option(
-    "--solver-steps",
-    type=int,
-    help="Number of ODE solver steps. Lower = faster but lower quality  .",
-)
-@click.option(
-    "--chunk-duration",
-    type=float,
-    help="Duration in seconds for each processing chunk  .",
-)
-@click.option(
-    "--chunk-overlap",
-    type=float,
-    help="Overlap duration in seconds between chunks for smooth transitions  .",
-)
-@click.option(
-    "--crossfade-type",
-    type=click.Choice(["cosine", "linear"]),
-    help="Crossfade type for blending chunks: 'cosine' (constant power, default) or 'linear'.",
-)
-@click.option(
-    "--no-chunks",
-    is_flag=True,
-    help="Disable chunking - process entire audio as single chunk (for testing short files).",
-)
+@max_segments_option()
+@window_size_option()
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
     src: Path | None,
     output_dir: Path | None,
     prompts: tuple[str, ...],
+    continue_from: str | None,
     model: Model | None = None,
     chain_residuals: bool | None = None,
     sample_rate: int | None = None,
-    solver: str | None = None,
-    solver_steps: int | None = None,
-    chunk_duration: float | None = None,
-    chunk_overlap: float | None = None,
-    crossfade_type: str | None = None,
-    no_chunks: bool = False,
+    max_segments: int | None = None,
+    window_size: float | None = None,
 ) -> None:
     """
-    SAM-Audio extraction pipeline with smart chunking.
+    Composite command: Full SAM-Audio extraction pipeline.
 
     Workflow:
-        1. Convert to WAV
-        2. Process with SAM-Audio (optimizer handles chunking/crossfade internally)
-        3. Save outputs
+        1. convert to-wav (src → wav)
+        2. segment split (wav → segments)
+        3. extract process-sam-audio (segments → processed segments)
+        4. merge concat (processed segments → final outputs)
 
-    The optimizer automatically chunks long audio with overlap and crossfade for
-    smooth transitions. Use --no-chunks to disable chunking for short test files.
+    This command orchestrates the atomic commands to provide a complete
+    SAM-Audio extraction workflow with optional residual chaining.
     """
     try:
         app_context: AppContext = ctx.obj
         logger = app_context.logger
         config = app_context.app_config
 
-        # Override config with CLI arguments
+        # Override config with CLI arguments if provided
         if src:
             config.source_file = src
         if output_dir:
             config.target_dir = output_dir.expanduser()
         if prompts:
             config.prompts = list(prompts)
-        if sample_rate is not None:
-            config.sample_rate = sample_rate
-        if model is not None:
-            config.model_item = model
         if chain_residuals is not None:
             config.chain_residuals = chain_residuals
+        if sample_rate is not None:
+            config.sample_rate = sample_rate
+        if max_segments is not None:
+            config.max_segments = max_segments
+        if window_size is not None:
+            config.segment_window_size = window_size
+        if model is not None:
+            config.model_item = model
 
         # Validate required parameters
         src_path = Path(config.source_file) if config.source_file else None
-        if not src_path:
+        if not src_path and not src and not continue_from:
             raise ValueError("No source file specified (use --src or set in config)")
 
-        # Log configuration
+        # Log final configuration
         logger.info("Starting SAM-Audio extraction pipeline...")
-        logger.info(f"Source: {src_path}")
         logger.info(f"Target: {config.target_dir}")
         logger.info(f"Prompts: {config.prompts}")
+        logger.info(f"Chain residuals: {config.chain_residuals}")
+        logger.info(f"Segment window size: {config.segment_window_size}s")
         logger.info(f"Model: {config.model_item.value}")
-        logger.info(f"Chunking: {'disabled' if no_chunks else 'enabled'}")
-        if not no_chunks:
+        if config.sample_rate:
+            logger.info(f"Target sample rate: {config.sample_rate} Hz")
+        if config.max_segments:
+            logger.info(f"Max segments: {config.max_segments}")
+
+        # Determine temp directory
+        if continue_from:
+            logger.info(f"Continuing from: {continue_from}")
+            tmp_path = Path(continue_from)
+            wav_file = tmp_path / "audio.wav"
+            if not wav_file.exists():
+                raise FileNotFoundError(f"Cannot continue: {wav_file} not found in {tmp_path}")
+        else:
+            # Generate unique temp directory for this run
+            run_id = str(uuid.uuid4())
+            base_tmp = Path(config.temp_dir)
+            tmp_path = base_tmp / run_id
+            tmp_path.mkdir(parents=True, exist_ok=True)
+            logger.info(f"Using temp directory: {tmp_path}")
+
+            # Step 1: Convert to WAV
+            logger.info("=== Step 1/4: Converting to WAV ===")
+
+            # Ensure src_path is not None (validated earlier)
+            assert src_path is not None, "Source path must be specified"
+
+            wav_file = tmp_path / "audio.wav"
+            convert_to_wav(src_path, wav_file)
+            logger.info(f"Converted to: {wav_file}")
+
+            # Step 2: Segment audio
+            logger.info("=== Step 2/4: Segmenting audio ===")
+
+            total_duration = load_audio_duration(wav_file)
+            logger.info(f"Total audio length: {total_duration:.2f} seconds")
+
+            segment_lengths = create_segments(
+                total_duration,
+                window_size=config.segment_window_size,
+                max_segments=config.max_segments,
+            )
             logger.info(
-                f"Chunk settings: duration={chunk_duration or config.chunk_duration}s, "
-                f"overlap={chunk_overlap or config.chunk_overlap}s, "
-                f"crossfade={crossfade_type or config.crossfade_type}"
+                f"Creating {len(segment_lengths)} segments "
+                f"({config.segment_window_size}s window): "
+                f"{[round(s, 2) for s in segment_lengths]}"
             )
 
-        # Generate unique temp directory for this run
-        run_id = str(uuid.uuid4())
-        base_tmp = Path(config.temp_dir)
-        tmp_path = base_tmp / run_id
-        tmp_path.mkdir(parents=True, exist_ok=True)
-        logger.info(f"Using temp directory: {tmp_path}")
+            segment_files, segment_metadata = split_to_files(wav_file, tmp_path, segment_lengths)
+            logger.info(f"Created {len(segment_files)} segments in {tmp_path}")
+
+        # Step 3: Process segments with SAM-Audio
+        logger.info("=== Step 3/4: Processing with SAM-Audio ===")
+        processed_dir = tmp_path / "processed"
+        processed_dir.mkdir(parents=True, exist_ok=True)
+
+        # Find segment files if continuing
+        if continue_from:
+            segment_files = sorted(tmp_path.glob("segment-*.wav"))
+            if not segment_files:
+                raise FileNotFoundError(f"No segment-*.wav files found in {tmp_path}")
 
         # Determine device
         device = config.device
         if device == "auto":
+            import torch
+
             accelerator = (
                 torch.accelerator.current_accelerator()
                 if torch.accelerator.is_available()
@@ -152,115 +185,75 @@ def sam_audio(
             device = accelerator.type if accelerator is not None else "cpu"
             logger.info(f"Auto-detected device: {device}")
 
-        # Initialize performance tracking
-        perf_tracker = PerformanceTracker(
-            source_file=src_path,
-            output_dir=config.target_dir,
+        # Process segments
+        process_segments_with_sam_audio(
+            segment_files=segment_files,
+            prompts=config.prompts,
+            output_dir=processed_dir,
+            model_name=config.model_item.value,
             device=device,
+            batch_size=config.batch_prompts,
+            logger=logger,
+            predict_spans=config.predict_spans,
+            reranking_candidates=config.reranking_candidates,
         )
-        perf_tracker.__enter__()
 
-        # Add metadata
-        perf_tracker.add_metadata("prompts", config.prompts)
-        perf_tracker.add_metadata("model", config.model_item.value)
-        perf_tracker.add_metadata("chunking_enabled", not no_chunks)
-        if solver:
-            perf_tracker.add_metadata("solver", solver or config.ode_solver)
-        if solver_steps:
-            perf_tracker.add_metadata("solver_steps", solver_steps or config.ode_steps)
-
-        # Step 1: Convert to WAV
-        logger.info("=== Step 1/3: Converting to WAV ===")
-        wav_file = tmp_path / "audio.wav"
-        convert_to_wav(src_path, wav_file)
-        logger.info(f"Converted to: {wav_file}")
-
-        # Load audio duration for tracking
-        total_duration = load_audio_duration(wav_file)
-        logger.info(f"Total audio length: {total_duration:.2f} seconds")
-        perf_tracker.metrics.audio_duration_seconds = total_duration
-
-        # Step 2: Process with SAM-Audio optimizer
-        logger.info("=== Step 2/3: Processing with SAM-Audio ===")
-
-        # Lazy imports for performance
-        import soundfile as sf
-        import torchaudio
-        from sam_audio import SAMAudio, SAMAudioProcessor
-
-        from audio_playground.core.sam_audio_optimizer import SolverConfig, process_long_audio
-
-        # Load model
-        logger.info(f"Loading SAM-Audio model: {config.model_item.value}")
-        model_instance = (
-            SAMAudio.from_pretrained(
-                config.model_item.value,
-                map_location=device,
-            )
-            .to(device)
-            .eval()
-        )
-        processor = SAMAudioProcessor.from_pretrained(config.model_item.value)
-        sr = processor.audio_sampling_rate
-
-        # Setup solver config
-        solver_method = solver or config.ode_solver
-        steps = solver_steps or config.ode_steps
-        solver_config = SolverConfig(method=solver_method, steps=steps)  # type: ignore[arg-type]
-
-        # Process audio (optimizer handles chunking internally)
-        with torch.inference_mode():
-            # If no_chunks, use very large chunk_duration to process as single chunk
-            effective_chunk_duration = (
-                999999.0 if no_chunks else (chunk_duration or config.chunk_duration)
-            )
-
-            results = process_long_audio(
-                audio_path=wav_file,
-                prompts=config.prompts,
-                model=model_instance,
-                processor=processor,
-                device=device,
-                chunk_duration=effective_chunk_duration,
-                overlap_duration=chunk_overlap or config.chunk_overlap,
-                crossfade_type=crossfade_type or config.crossfade_type,  # type: ignore[arg-type]
-                solver_config=solver_config,
-            )
-
-        # Step 3: Save outputs
-        logger.info("=== Step 3/3: Saving outputs ===")
+        # Step 4: Merge segments and save final output
+        logger.info("=== Step 4/4: Merging and saving final output ===")
 
         target_path = config.target_dir
         target_path.mkdir(parents=True, exist_ok=True)
 
-        for prompt, audio_tensor in results.items():
+        # Merge processed segments for each prompt (import torchaudio lazily)
+        import torchaudio
+
+        for prompt in config.prompts:
             safe_prompt = prompt.replace(" ", "_").replace("/", "_")
+
+            # Find all processed segments for this prompt
+            pattern = f"segment-*-{safe_prompt}.wav"
+            prompt_segments = sorted(processed_dir.glob(pattern))
+
+            if not prompt_segments:
+                logger.warning(
+                    f"No processed segments found for prompt '{prompt}' (pattern: {pattern})"
+                )
+                continue
+
+            logger.info(f"Merging {len(prompt_segments)} segments for prompt '{prompt}'")
+
+            # Concatenate segments
+            concatenated = concatenate_segments(prompt_segments)
+
+            # Determine output filename
             output_filename = f"{safe_prompt}-sam.wav"
             output_path = target_path / output_filename
 
+            # Get sample rate from first segment
+            _, sr = torchaudio.load(prompt_segments[0])
+
             # Apply target sample rate if specified
             if config.sample_rate and config.sample_rate != sr:
-                logger.info(f"Resampling {prompt} from {sr}Hz to {config.sample_rate}Hz")
+                logger.info(f"Resampling from {sr}Hz to {config.sample_rate}Hz")
                 resampler = torchaudio.transforms.Resample(sr, config.sample_rate)
-                audio_tensor = resampler(audio_tensor)
-                output_sr = config.sample_rate
-            else:
-                output_sr = sr
+                concatenated = resampler(concatenated)
+                sr = config.sample_rate
 
-            # Save output (move to CPU and convert to numpy for soundfile)
-            audio_np = audio_tensor.cpu().numpy()
-            sf.write(output_path.as_posix(), audio_np.T, int(output_sr))
+            # Save output
+            torchaudio.save(output_path.as_posix(), concatenated, int(sr))
             logger.info(f"Saved: {output_path}")
 
-        # Stop performance tracking and save report
-        perf_tracker.__exit__(None, None, None)
-        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
-        report_path = tmp_path / f"report-{timestamp}-sam-audio.yml"
-        perf_tracker.save_report(report_path, format="yaml")
+        # Handle residuals if chain_residuals is enabled
+        # NOTE: This simplified version does not implement full residual chaining
+        # For now, we just log a warning if chain_residuals is enabled
+        if config.chain_residuals and len(config.prompts) > 1:
+            logger.warning(
+                "Residual chaining is not yet implemented in the composite command. "
+                "This feature will be added in a future update."
+            )
 
         logger.info("All done!")
         logger.info(f"Output saved to: {target_path}")
-        logger.info(f"Performance report: {report_path}")
 
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")

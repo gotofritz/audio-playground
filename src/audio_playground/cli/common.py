@@ -101,14 +101,14 @@ def window_size_option(required: bool = False) -> Callable[[F], F]:
         Click option decorator
 
     Note:
-        Default value is 10.0 seconds
+        Default value comes from app_config.segment_window_size (10.0)
     """
     return click.option(
         "--window-size",
         type=float,
         default=None,
         required=required,
-        help="Segment length in seconds. If not specified, uses default (10.0s).",
+        help="Segment length in seconds. If not specified, uses config default.",
     )
 
 
