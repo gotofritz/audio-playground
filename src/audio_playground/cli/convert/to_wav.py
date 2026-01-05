@@ -6,6 +6,7 @@ import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import src_option, target_option
+from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.wav_converter import convert_to_wav as convert_to_wav_fn
 
 
@@ -25,14 +26,36 @@ def to_wav(
     """
     logger = app_context.logger
 
-    click.echo(f"Converting {src} to WAV format...")
-    logger.info(f"Converting {src} to WAV format")
+    # Initialize performance tracker
+    tracker = PerformanceTracker(
+        command_name="convert to-wav",
+        output_dir=target.parent,
+        logger=logger,
+    )
+    tracker.start()
 
-    # Ensure target directory exists
-    target.parent.mkdir(parents=True, exist_ok=True)
+    try:
+        click.echo(f"Converting {src} to WAV format...")
+        logger.info(f"Converting {src} to WAV format")
 
-    # Convert the file
-    convert_to_wav_fn(src, target)
+        # Add metadata
+        tracker.add_metadata("source_file", str(src))
+        tracker.add_metadata("target_file", str(target))
 
-    click.echo(f"Conversion complete. Output saved to {target}")
-    logger.info(f"Conversion complete: {target}")
+        # Ensure target directory exists
+        target.parent.mkdir(parents=True, exist_ok=True)
+
+        # Convert the file
+        convert_to_wav_fn(src, target)
+
+        # Track file size
+        if target.exists():
+            tracker.add_metadata("output_size_mb", round(target.stat().st_size / (1024 * 1024), 2))
+
+        click.echo(f"Conversion complete. Output saved to {target}")
+        logger.info(f"Conversion complete: {target}")
+
+    finally:
+        # Finalize and save performance report
+        tracker.stop()
+        tracker.save_report()

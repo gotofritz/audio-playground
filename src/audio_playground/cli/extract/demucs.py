@@ -9,6 +9,7 @@ import click
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import output_dir_option, src_option, suffix_option
 from audio_playground.cli.extract.process_demucs import process_audio_with_demucs
+from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.wav_converter import convert_to_wav
 
 
@@ -87,11 +88,19 @@ def demucs(
             --output-dir ./stems \\
             --shifts 10
     """
-    try:
-        app_context: AppContext = ctx.obj
-        logger = app_context.logger
-        config = app_context.app_config
+    app_context: AppContext = ctx.obj
+    logger = app_context.logger
+    config = app_context.app_config
 
+    # Initialize performance tracker
+    tracker = PerformanceTracker(
+        command_name="extract demucs",
+        output_dir=output_dir,
+        logger=logger,
+    )
+    tracker.start()
+
+    try:
         # Use config defaults for any unspecified options
         model_name = model if model is not None else config.demucs_model
         device_value = device if device is not None else config.device
@@ -99,6 +108,13 @@ def demucs(
         num_workers_value = num_workers if num_workers is not None else config.demucs_num_workers
         show_progress = progress if progress is not None else config.demucs_progress
         suffix_value = suffix if suffix is not None else config.demucs_suffix
+
+        # Add metadata
+        tracker.add_metadata("source_file", str(src))
+        tracker.add_metadata("model", model_name)
+        tracker.add_metadata("shifts", shifts_value)
+        tracker.add_metadata("num_workers", num_workers_value)
+        tracker.add_metadata("suffix", suffix_value)
 
         # Log configuration
         logger.info("Starting Demucs extraction pipeline...")
@@ -161,3 +177,7 @@ def demucs(
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}", err=True)
         ctx.exit(1)
+    finally:
+        # Save performance report
+        tracker.stop()
+        tracker.save_report()

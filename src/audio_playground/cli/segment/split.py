@@ -11,6 +11,7 @@ from audio_playground.cli.common import (
     src_option,
     window_size_option,
 )
+from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import load_audio_duration
 
@@ -41,27 +42,51 @@ def split(
     if window_size is None:
         window_size = config.segment_window_size
 
-    click.echo(f"Splitting {src} into segments...")
-    logger.info(f"Splitting {src} with window size {window_size}s")
+    # Initialize performance tracker
+    tracker = PerformanceTracker(
+        command_name="segment split",
+        output_dir=output_dir,
+        logger=logger,
+    )
+    tracker.start()
 
-    # Get audio duration
-    total_duration = load_audio_duration(src)
-    click.echo(f"Audio duration: {total_duration:.2f}s")
+    try:
+        click.echo(f"Splitting {src} into segments...")
+        logger.info(f"Splitting {src} with window size {window_size}s")
 
-    # Calculate segment lengths
-    segment_lengths = create_segments(total_duration, window_size, max_segments)
-    click.echo(f"Creating {len(segment_lengths)} segments...")
+        # Get audio duration
+        total_duration = load_audio_duration(src)
+        click.echo(f"Audio duration: {total_duration:.2f}s")
 
-    # Create output directory
-    output_dir.mkdir(parents=True, exist_ok=True)
+        # Add metadata
+        tracker.add_metadata("source_file", str(src))
+        tracker.add_metadata("total_duration_seconds", round(total_duration, 2))
+        tracker.add_metadata("window_size_seconds", window_size)
+        tracker.add_metadata("max_segments", max_segments)
 
-    # Split to files
-    segment_files, segment_metadata = split_to_files(src, output_dir, segment_lengths)
+        # Calculate segment lengths
+        segment_lengths = create_segments(total_duration, window_size, max_segments)
+        click.echo(f"Creating {len(segment_lengths)} segments...")
 
-    # Report results
-    click.echo(f"\nCreated {len(segment_files)} segments:")
-    for i, (seg_file, (start_time, duration)) in enumerate(zip(segment_files, segment_metadata)):
-        click.echo(f"  {seg_file.name}: start={start_time:.2f}s, duration={duration:.2f}s")
+        # Create output directory
+        output_dir.mkdir(parents=True, exist_ok=True)
 
-    click.echo(f"\nMetadata saved to: {output_dir / 'segment_metadata.json'}")
-    logger.info(f"Split complete: {len(segment_files)} segments in {output_dir}")
+        # Split to files
+        segment_files, segment_metadata = split_to_files(src, output_dir, segment_lengths)
+
+        # Add final metadata
+        tracker.add_metadata("segments_created", len(segment_files))
+        tracker.add_metadata("segment_lengths", [round(l, 2) for l in segment_lengths])
+
+        # Report results
+        click.echo(f"\nCreated {len(segment_files)} segments:")
+        for i, (seg_file, (start_time, duration)) in enumerate(zip(segment_files, segment_metadata)):
+            click.echo(f"  {seg_file.name}: start={start_time:.2f}s, duration={duration:.2f}s")
+
+        click.echo(f"\nMetadata saved to: {output_dir / 'segment_metadata.json'}")
+        logger.info(f"Split complete: {len(segment_files)} segments in {output_dir}")
+
+    finally:
+        # Finalize and save performance report
+        tracker.stop()
+        tracker.save_report()

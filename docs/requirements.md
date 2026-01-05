@@ -12,13 +12,13 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 3 Complete | Ready for Phase 4
+**Current Phase:** Phase 4 In Progress (Step 4.1 Complete)
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
 - ✅ Phase 2: Complete (All atomic and composite commands implemented)
 - ✅ Phase 3: Complete (Restructured to src layout, replaced mypy with ty)
-- ⏳ Phase 4: Not Started (Performance profiling & terminology rationalization)
+- ⏳ Phase 4: In Progress (Step 4.1 Complete - Performance profiling added)
 - ⏳ Phase 5: Not Started
 - ⏳ Phase 6: Not Started
 - ⏳ Phase 7: Not Started
@@ -79,35 +79,19 @@ Support both SAM-Audio and Demucs models.
 
 ## ⏳ Phase 4: Performance Profiling & Terminology Rationalization
 
-**Status:** Not Started
+**Status:** In Progress (Step 4.1 Complete)
 
 **Goals:**
 
-1. Add performance profiling to all CLI commands
+1. ✅ Add performance profiling to all CLI commands
 2. Rationalize terminology to use "chunk" consistently throughout the project
 3. Remove deprecated commands
 4. Add optional overlap support for chunk-based operations
 5. Clean up legacy arguments
 
-### Step 4.1: Create Performance Profiler
+### Step 4.1: Create Performance Profiler ✅
 
-**Implementation:**
-
-- Create `src/audio_playground/core/performance_tracker.py` with `PerformanceTracker` class
-- Track execution time, memory usage, and speedup metrics
-- Auto-generate performance reports as YAML files
-- Add `@performance_tracker` decorator for easy integration
-
-**Integration:**
-
-- Add performance tracking to every CLI command via decorator or context manager
-- Save reports to `--output-dir` or current directory
-- Include in test coverage
-
-**Files:**
-
-- `src/audio_playground/core/performance_tracker.py` (new)
-- Update all CLI commands in `src/audio_playground/cli/`
+**Status:** ✅ Complete - Created `PerformanceTracker` class with execution time and memory tracking, YAML report generation, decorator support. Integrated into all CLI commands (convert, segment, merge, extract sam-audio, extract demucs). Comprehensive test suite added in `tests/core/test_performance_tracker.py`.
 
 ### Step 4.2: Remove Deprecated Commands
 
