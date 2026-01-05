@@ -95,6 +95,7 @@ Support both SAM-Audio and Demucs models with model-specific processing commands
 - ✅ Created comprehensive test suite in `tests/core/test_sam_audio_optimizer.py`
 
 **Performance Benefits:**
+
 - Text caching: 20-30% speedup for multi-segment processing with same prompts
 - Chunked processing: Enables arbitrarily long audio files (previously limited by memory)
 - Streaming: First results available in ~10-15s instead of waiting for full file
@@ -540,13 +541,20 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 
 ---
 
-## ⏳ Phase 9: Testing & Coverage
+claude/implement-phase-4-RV4DO
+
+## ⏳ Phase 9: ReadTheDocs integration
+
+Create full documentation and usage on read the docs.
+Use this blogpost for instructions on installing on M1 laptop <https://gotofritz.net/blog/2025-12-20-playing-with-the-sam-audio-model-on-my-m1-macbook/>
+
+## ⏳ Phase 10: Testing & Coverage
 
 ### Goal
 
 Achieve >=95% unit test coverage; no regressions.
 
-### Step 9.1: Unit tests for `core/` modules
+### Step 10.1: Unit tests for `core/` modules
 
 - **Files:** Create `tests/core/test_*.py` for each module
 - **Coverage Target:** >=95% per module
@@ -576,7 +584,7 @@ def test_split_to_files_creates_segments(tmp_path):
     # Verify metadata JSON structure
 ```
 
-### Step 9.2: Integration tests for CLI commands
+### Step 10.2: Integration tests for CLI commands
 
 - **Files:** Create `tests/cli/test_*.py` for each command
 - **Coverage Target:** >=90% per command
@@ -585,14 +593,14 @@ def test_split_to_files_creates_segments(tmp_path):
   - Output file creation
   - Config override via CLI
 
-### Step 9.3: Regression test for `extract sam-audio`
+### Step 10.3: Regression test for `extract sam-audio`
 
 - **File:** `tests/integration/test_extract_sam_audio.py`
 - **Goal:** Ensure refactored version produces identical output to PoC
 - **Method:** Run on small test audio; compare outputs (bit-for-bit if possible)
 - **Test:** Should run in <5 min with small audio
 
-### Step 9.4: Coverage reporting
+### Step 10.4: Coverage reporting
 
 - **File:** Update `Taskfile.yml`
 - **Change:** Add task `task coverage` to open HTML report

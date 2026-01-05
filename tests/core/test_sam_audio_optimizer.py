@@ -1,8 +1,6 @@
 """Tests for SAM-Audio optimizer module."""
 
-import hashlib
 import math
-from pathlib import Path
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
