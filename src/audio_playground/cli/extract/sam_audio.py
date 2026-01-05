@@ -65,11 +65,6 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
     help="Crossfade type for blending chunks: 'cosine' (constant power, default) or 'linear'.",
 )
 @click.option(
-    "--no-prompt-cache",
-    is_flag=True,
-    help="Disable prompt caching (caching enabled by default for 20-30%% speedup).",
-)
-@click.option(
     "--no-chunks",
     is_flag=True,
     help="Disable chunking - process entire audio as single chunk (for testing short files).",
@@ -88,7 +83,6 @@ def sam_audio(
     chunk_duration: float | None = None,
     chunk_overlap: float | None = None,
     crossfade_type: str | None = None,
-    no_prompt_cache: bool = False,
     no_chunks: bool = False,
 ) -> None:
     """
@@ -234,7 +228,6 @@ def sam_audio(
                 overlap_duration=chunk_overlap or config.chunk_overlap,
                 crossfade_type=crossfade_type or config.crossfade_type,  # type: ignore[arg-type]
                 solver_config=solver_config,
-                enable_caching=not no_prompt_cache and config.enable_prompt_caching,
             )
 
         # Step 3: Save outputs

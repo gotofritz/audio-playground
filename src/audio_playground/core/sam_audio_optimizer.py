@@ -4,14 +4,11 @@ This module provides platform-agnostic optimizations that work on all platforms
 (Windows, Linux, Mac, CUDA, CPU) to improve processing speed and memory efficiency.
 
 Features:
-- Text feature caching: Cache text embeddings to avoid re-encoding same prompts
 - Chunked processing: Process long audio files in overlapping chunks with crossfade
 - Streaming mode: Yield results chunk-by-chunk as they're ready
-- Configurable ODE solvers: Trade quality for speed with different solver methods
 - Memory management: Explicit cache clearing between chunks/batches
 """
 
-import hashlib
 import logging
 import math
 from collections.abc import Generator
@@ -33,97 +30,6 @@ class SolverConfig:
 
     method: Literal["euler", "midpoint"] = "midpoint"
     steps: int = 32
-
-
-class PromptCache:
-    """Cache text embeddings to avoid re-encoding same prompts.
-
-    This is especially beneficial for multi-segment processing with identical prompts,
-    providing 20-30% speedup by caching the text encoder output.
-    """
-
-    def __init__(self) -> None:
-        """Initialize empty prompt cache."""
-        self._cache: dict[str, Any] = {}
-        self._hits = 0
-        self._misses = 0
-
-    def _hash_prompts(self, prompts: list[str]) -> str:
-        """Generate a stable hash for a list of prompts.
-
-        Args:
-            prompts: List of text prompts
-
-        Returns:
-            SHA256 hash of the sorted, concatenated prompts
-        """
-        # Sort prompts to ensure consistent hashing regardless of order
-        sorted_prompts = sorted(prompts)
-        prompt_str = "|".join(sorted_prompts)
-        return hashlib.sha256(prompt_str.encode()).hexdigest()
-
-    def get_or_encode(self, prompts: list[str], encoder_fn: Any, *args: Any, **kwargs: Any) -> Any:
-        """Get cached embeddings or encode prompts if not in cache.
-
-        Args:
-            prompts: List of text prompts to encode
-            encoder_fn: Function to call if prompts not cached
-            *args: Positional arguments to pass to encoder_fn
-            **kwargs: Keyword arguments to pass to encoder_fn
-
-        Returns:
-            Encoded text embeddings (from cache or freshly computed)
-        """
-        cache_key = self._hash_prompts(prompts)
-
-        if cache_key in self._cache:
-            self._hits += 1
-            logger.debug(
-                f"Prompt cache HIT (hits={self._hits}, misses={self._misses}, "
-                f"hit_rate={self.hit_rate:.1%})"
-            )
-            return self._cache[cache_key]
-
-        self._misses += 1
-        logger.debug(
-            f"Prompt cache MISS (hits={self._hits}, misses={self._misses}, "
-            f"hit_rate={self.hit_rate:.1%})"
-        )
-
-        # Encode and cache
-        result = encoder_fn(*args, **kwargs)
-        self._cache[cache_key] = result
-        return result
-
-    @property
-    def hit_rate(self) -> float:
-        """Calculate cache hit rate.
-
-        Returns:
-            Hit rate as a float between 0.0 and 1.0
-        """
-        total = self._hits + self._misses
-        return self._hits / total if total > 0 else 0.0
-
-    def clear(self) -> None:
-        """Clear the cache and reset statistics."""
-        self._cache.clear()
-        self._hits = 0
-        self._misses = 0
-        logger.debug("Prompt cache cleared")
-
-    def stats(self) -> dict[str, int | float]:
-        """Get cache statistics.
-
-        Returns:
-            Dictionary with hits, misses, and hit_rate
-        """
-        return {
-            "hits": self._hits,
-            "misses": self._misses,
-            "hit_rate": self.hit_rate,
-            "cache_size": len(self._cache),
-        }
 
 
 def clear_caches(device: str) -> None:
@@ -190,7 +96,6 @@ def process_long_audio(
     overlap_duration: float = 2.0,
     crossfade_type: Literal["cosine", "linear"] = "cosine",
     solver_config: SolverConfig | None = None,
-    enable_caching: bool = True,
 ) -> dict[str, Any]:
     """Process long audio files in overlapping chunks to reduce peak memory.
 
@@ -208,7 +113,6 @@ def process_long_audio(
         overlap_duration: Duration of overlap between chunks in seconds (default: 2.0)
         crossfade_type: Type of crossfade ("cosine" or "linear")
         solver_config: Optional solver configuration (NOT YET SUPPORTED by SAMAudio API)
-        enable_caching: Whether to enable prompt caching (default: True)
 
     Returns:
         Dictionary mapping prompt names to separated audio tensors
@@ -254,9 +158,6 @@ def process_long_audio(
 
     # Initialize output tensors
     outputs: dict[str, list[Any]] = {prompt: [] for prompt in prompts}
-
-    # Setup prompt cache if enabled
-    prompt_cache = PromptCache() if enable_caching else None
 
     # Process chunks
     for chunk_idx in range(num_chunks):
@@ -328,14 +229,6 @@ def process_long_audio(
 
     # Concatenate all chunks for each prompt
     final_outputs = {prompt: torch.cat(chunks, dim=1) for prompt, chunks in outputs.items()}
-
-    # Log cache statistics if enabled
-    if prompt_cache:
-        stats = prompt_cache.stats()
-        logger.info(
-            f"Prompt cache stats: {stats['hits']} hits, {stats['misses']} misses, "
-            f"hit rate: {stats['hit_rate']:.1%}"
-        )
 
     return final_outputs
 

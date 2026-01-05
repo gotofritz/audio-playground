@@ -68,10 +68,6 @@ class AudioPlaygroundConfig(BaseSettings):
     )
 
     # Performance optimization settings (Phase 4)
-    enable_prompt_caching: bool = Field(
-        default=True,
-        description="Enable caching of text embeddings to avoid re-encoding same prompts (20-30% speedup)",
-    )
     chunk_duration: float = Field(
         default=30.0,
         description="Duration in seconds for chunked processing of long audio files",

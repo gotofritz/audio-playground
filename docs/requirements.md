@@ -84,23 +84,19 @@ Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process
 **Implementation Summary:**
 
 - ✅ Created `src/audio_playground/core/sam_audio_optimizer.py` with all optimization features
-- ✅ **Text Feature Caching:** `PromptCache` class caches text embeddings to avoid re-encoding (20-30% speedup for multi-prompt processing)
 - ✅ **Chunked Processing:** `process_long_audio()` processes long audio files in overlapping chunks with cosine/linear crossfade to avoid artifacts
 - ✅ **Streaming Mode:** `process_streaming()` yields chunks as ready, enabling progress monitoring and faster first results
-- ✅ **Configurable ODE Solvers:** `SolverConfig` dataclass allows trading quality for speed (euler=faster, midpoint=higher quality)
 - ✅ **Memory Management:** `clear_caches()` and `get_memory_stats()` utilities for explicit cache clearing and monitoring
-- ✅ Updated `app_config.py` with performance optimization settings (enable_prompt_caching, chunk_duration, chunk_overlap, crossfade_type, ode_solver, ode_steps)
-- ✅ Added CLI options to `extract sam-audio` command: `--no-chunks`, `--solver`, `--solver-steps`, `--chunk-duration`, `--chunk-overlap`, `--crossfade-type`, `--no-prompt-cache`
+- ✅ Updated `app_config.py` with performance optimization settings (chunk_duration, chunk_overlap, crossfade_type, ode_solver, ode_steps)
+- ✅ Added CLI options to `extract sam-audio` command: `--no-chunks`, `--solver`, `--solver-steps`, `--chunk-duration`, `--chunk-overlap`, `--crossfade-type`
 - ✅ **Architectural Refactoring:** Eliminated file-based segmentation in favor of direct optimizer integration. Removed redundant `process-sam-audio` and `process-demucs` CLI commands. Moved Demucs processing logic to `core/demucs_processor.py`.
 - ✅ **Performance Reporting:** Added `PerformanceTracker` for automatic performance metrics (time, memory, speedup) saved as YAML reports
 - ✅ Created comprehensive test suite in `tests/core/test_sam_audio_optimizer.py`
 
 **Performance Benefits:**
 
-- Text caching: 20-30% speedup for multi-segment processing with same prompts
 - Chunked processing: Enables arbitrarily long audio files (previously limited by memory)
 - Streaming: First results available in ~10-15s instead of waiting for full file
-- Euler solver: ~2x faster with minimal quality loss
 - Memory management: Reduces OOM errors on large files
 
 ---
