@@ -239,7 +239,8 @@ def process_long_audio(
         with torch.inference_mode():
             result = model.separate(inputs)
 
-        return {prompt: result.target[i] for i, prompt in enumerate(prompts)}
+        # Move to CPU before returning (MPS doesn't support torchaudio.save)
+        return {prompt: result.target[i].cpu() for i, prompt in enumerate(prompts)}
 
     # Calculate chunk parameters
     chunk_samples = int(chunk_duration * sample_rate)

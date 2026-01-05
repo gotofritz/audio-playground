@@ -176,7 +176,8 @@ def process_segments_with_sam_audio(
                         output_path = output_dir / output_filename
 
                         concatenated = torch.cat(chunks, dim=1)
-                        torchaudio.save(output_path.as_posix(), concatenated, sr)
+                        # Move to CPU before saving (MPS doesn't support torchaudio.save)
+                        torchaudio.save(output_path.as_posix(), concatenated.cpu(), sr)
                         logger.debug(f"Saved: {output_path}")
 
             else:
@@ -205,7 +206,8 @@ def process_segments_with_sam_audio(
                     if audio_tensor.dim() == 1:
                         audio_tensor = audio_tensor.unsqueeze(0)
 
-                    torchaudio.save(output_path.as_posix(), audio_tensor, sr)
+                    # Move to CPU before saving (MPS doesn't support torchaudio.save)
+                    torchaudio.save(output_path.as_posix(), audio_tensor.cpu(), sr)
                     logger.debug(f"Saved: {output_path}")
 
             logger.info(f"Completed processing {audio_path.name}")
