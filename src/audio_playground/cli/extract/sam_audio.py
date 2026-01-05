@@ -30,6 +30,11 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
     help="What model to use. Use -h to view list",
 )
 @click.option(
+    "--chain-residuals/--no-chain-residuals",
+    default=None,
+    help="Chain residuals to compute cumulative residual (sam-other.wav) when multiple prompts used. If not specified, uses config default.",
+)
+@click.option(
     "--sample-rate",
     type=int,
     help="Target sample rate in Hz for output files (e.g., 44100, 48000). If not specified, uses original sample rate.",
@@ -76,6 +81,7 @@ def sam_audio(
     output_dir: Path | None,
     prompts: tuple[str, ...],
     model: Model | None = None,
+    chain_residuals: bool | None = None,
     sample_rate: int | None = None,
     solver: str | None = None,
     solver_steps: int | None = None,
@@ -112,6 +118,8 @@ def sam_audio(
             config.sample_rate = sample_rate
         if model is not None:
             config.model_item = model
+        if chain_residuals is not None:
+            config.chain_residuals = chain_residuals
 
         # Validate required parameters
         src_path = Path(config.source_file) if config.source_file else None
