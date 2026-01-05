@@ -388,7 +388,8 @@ def process_streaming(
     num_chunks = math.ceil(info.num_frames / chunk_samples)
 
     logger.info(
-        f"Streaming {audio_path.name}: {num_chunks} chunks of {chunk_duration}s each"
+        f"Streaming {audio_path.name}: duration={total_duration:.1f}s, "
+        f"{num_chunks} chunks of {chunk_duration}s each"
     )
 
     for chunk_idx in range(num_chunks):
