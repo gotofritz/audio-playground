@@ -62,9 +62,7 @@ class PromptCache:
         prompt_str = "|".join(sorted_prompts)
         return hashlib.sha256(prompt_str.encode()).hexdigest()
 
-    def get_or_encode(
-        self, prompts: list[str], encoder_fn: Any, *args: Any, **kwargs: Any
-    ) -> Any:
+    def get_or_encode(self, prompts: list[str], encoder_fn: Any, *args: Any, **kwargs: Any) -> Any:
         """Get cached embeddings or encode prompts if not in cache.
 
         Args:
@@ -215,12 +213,11 @@ def process_long_audio(
     Returns:
         Dictionary mapping prompt names to separated audio tensors
     """
-    import torch
-    import torchaudio
-
     # Load audio metadata to determine total duration
     # Using soundfile which is a torchaudio dependency and has cross-version compatibility
     import soundfile as sf
+    import torch
+    import torchaudio
 
     info = sf.info(audio_path.as_posix())
     sample_rate = info.samplerate
@@ -270,8 +267,7 @@ def process_long_audio(
         end_time = end_sample / sample_rate
 
         logger.debug(
-            f"Processing chunk {chunk_idx + 1}/{num_chunks}: "
-            f"{start_time:.1f}s - {end_time:.1f}s"
+            f"Processing chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s"
         )
 
         # Load chunk
@@ -309,9 +305,7 @@ def process_long_audio(
 
                 # Apply crossfade if not the first chunk
                 if chunk_idx > 0 and overlap_samples > 0:
-                    fade_out, fade_in = create_crossfade_window(
-                        overlap_samples, crossfade_type
-                    )
+                    fade_out, fade_in = create_crossfade_window(overlap_samples, crossfade_type)
 
                     # Get the last chunk's overlapping tail
                     prev_tail = outputs[prompt][-1][:, -overlap_samples:]
@@ -324,9 +318,7 @@ def process_long_audio(
 
                     # Replace the tail of previous chunk and head of current chunk
                     outputs[prompt][-1] = outputs[prompt][-1][:, :-overlap_samples]
-                    chunk_result = torch.cat(
-                        [blended, chunk_result[:, overlap_samples:]], dim=1
-                    )
+                    chunk_result = torch.cat([blended, chunk_result[:, overlap_samples:]], dim=1)
 
                 outputs[prompt].append(chunk_result)
 
@@ -339,9 +331,7 @@ def process_long_audio(
         clear_caches(device)
 
     # Concatenate all chunks for each prompt
-    final_outputs = {
-        prompt: torch.cat(chunks, dim=1) for prompt, chunks in outputs.items()
-    }
+    final_outputs = {prompt: torch.cat(chunks, dim=1) for prompt, chunks in outputs.items()}
 
     # Log cache statistics if enabled
     if prompt_cache:
@@ -380,11 +370,10 @@ def process_streaming(
     Yields:
         Tuples of (prompt, chunk_audio_tensor, chunk_index)
     """
-    import torch
-    import torchaudio
-
     # Load audio metadata using soundfile for cross-version compatibility
     import soundfile as sf
+    import torch
+    import torchaudio
 
     info = sf.info(audio_path.as_posix())
     sample_rate = info.samplerate
