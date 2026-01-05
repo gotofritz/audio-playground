@@ -47,17 +47,17 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
 @click.option(
     "--solver-steps",
     type=int,
-    help="Number of ODE solver steps. Lower = faster but lower quality (default: 32).",
+    help="Number of ODE solver steps. Lower = faster but lower quality  .",
 )
 @click.option(
     "--chunk-duration",
     type=float,
-    help="Duration in seconds for each processing chunk (default: 30.0).",
+    help="Duration in seconds for each processing chunk  .",
 )
 @click.option(
     "--chunk-overlap",
     type=float,
-    help="Overlap duration in seconds between chunks for smooth transitions (default: 2.0).",
+    help="Overlap duration in seconds between chunks for smooth transitions  .",
 )
 @click.option(
     "--crossfade-type",
@@ -188,10 +188,7 @@ def sam_audio(
         import torchaudio
         from sam_audio import SAMAudio, SAMAudioProcessor
 
-        from audio_playground.core.sam_audio_optimizer import (
-            SolverConfig,
-            process_long_audio,
-        )
+        from audio_playground.core.sam_audio_optimizer import SolverConfig, process_long_audio
 
         # Load model
         logger.info(f"Loading SAM-Audio model: {config.model_item.value}")

@@ -69,7 +69,7 @@ class AudioPlaygroundConfig(BaseSettings):
 
     # Performance optimization settings (Phase 4)
     chunk_duration: float = Field(
-        default=30.0,
+        default=10.0,
         description="Duration in seconds for chunked processing of long audio files",
     )
     chunk_overlap: float = Field(

@@ -384,7 +384,7 @@ def process_long_audio(
     device: str = "auto",
     backend: AudioBackend | None = None,  # New: backend instance
     backend_name: str = "auto",  # New: backend selection
-    chunk_duration: float = 30.0,
+    chunk_duration: float = 10.0,
     overlap_duration: float = 2.0,
     crossfade_type: Literal["cosine", "linear"] = "cosine",
     solver_config: SolverConfig | None = None,

@@ -235,7 +235,7 @@ class TestProcessLongAudio:
                         model=mock_model,
                         processor=mock_processor,
                         device="cpu",
-                        chunk_duration=30.0,
+                        chunk_duration=10.0,
                         overlap_duration=2.0,
                     )
 
