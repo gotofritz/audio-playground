@@ -105,9 +105,10 @@ Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process
 
 **Status:** Not Started
 
-**Background:** SAMAudio uses diffusion models with ODE (Ordinary Differential Equation) integration to gradually transform from noise (t=0) to clean separated audio (t=1). Different solver methods and step sizes trade speed for quality. The mlx-audio project reimplemented SAMAudio in MLX with full control over ODE integration, enabling significant performance and quality tuning.
+**Background:** SAMAudio uses diffusion models with ODE (Ordinary Differential Equation) integration to gradually transform from noise (t=0) to clean separated audio (t=1). Different solver methods and step sizes trade speed for quality. The mlx-audio project reimplemented SAMAudio in MLX with full control over ODE integration, enabling significant performance and quality tuning. Files from both are available under docs/inspiration
 
 **Key Concepts:**
+
 - **ODE Integration:** The core diffusion process - integrating through small time steps from noise to clean audio
 - **Solver Methods:**
   - **Euler:** 1 forward pass per step (~50% faster, lower quality)
@@ -116,11 +117,13 @@ Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process
 - **Audio Codec (DACVAE):** Compression layer to encode raw audio into feature space before processing
 
 **Current Limitations:**
+
 - We use PyTorch SAMAudio's `model.separate()` as a black box - no control over internal diffusion process
 - We don't know if PyTorch SAMAudio exposes solver parameters in its API
 - Text prompts are re-encoded for each chunk (wasteful for short prompts like "bass", "drums")
 
 **Goals:**
+
 1. Gain control over ODE solver parameters (method, steps) for quality/speed tuning
 2. Implement MLX backend for Apple Silicon users (10-50x faster than PyTorch)
 3. Optimize text feature encoding (pre-encode once, reuse across chunks)
@@ -129,26 +132,31 @@ Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process
 ### Step 5.1: Investigate PyTorch SAMAudio ODE Control
 
 **Research Phase:**
+
 - Examine PyTorch SAMAudio source code (`docs/inspiration/original_sam_audio.py` if available)
 - Look for hidden parameters in `model.separate()` that control solver behavior
 - Check if newer versions of `sam-audio` package expose solver configuration
 - Review SAMAudio GitHub issues/PRs for solver control discussions
 
 **Decision Point:**
+
 - **If solver parameters exist:** Document them and integrate into our optimizer
 - **If not:** Proceed to Step 5.2 (MLX backend) or Step 5.3 (custom ODE wrapper)
 
 **Files:**
+
 - Research notes in `docs/research/pytorch_sam_audio_ode_investigation.md` (new)
 
 ### Step 5.2: MLX Backend Integration (Apple Silicon Fast Path)
 
 **Files:**
+
 - `audio_playground/core/backends/__init__.py` (new)
 - `audio_playground/core/backends/mlx_backend.py` (new)
 - `audio_playground/core/backends/pytorch_backend.py` (new)
 
 **Rationale:**
+
 - mlx-audio reimplemented SAMAudio in MLX with full ODE control
 - MLX is optimized for Apple's unified memory architecture
 - Provides 10-50x speedup on M1/M2/M3 chips
@@ -362,6 +370,7 @@ class PyTorchBackend(AudioBackend):
 **File:** `audio_playground/core/sam_audio_optimizer.py` (modify)
 
 **Changes:**
+
 - Replace direct SAMAudio usage with backend abstraction
 - Pass solver config through to backend
 - Add backend initialization logic
@@ -473,6 +482,7 @@ def sam_audio(
 **Implementation Note:** This is already done correctly in MLX backend. For PyTorch backend, we need to investigate if the processor allows passing pre-encoded features.
 
 **Research:**
+
 - Check if `SAMAudioProcessor` can output features separately
 - Check if `model.separate()` accepts pre-encoded text features
 - If not, this optimization remains MLX-only
@@ -480,12 +490,13 @@ def sam_audio(
 ### Step 5.6: Documentation & Performance Benchmarks
 
 **Files:**
+
 - `docs/BACKENDS.md` (new)
 - `README.md` (update installation instructions)
 
 **Content for BACKENDS.md:**
 
-```markdown
+````markdown
 # Backend Selection Guide
 
 ## Overview
@@ -497,23 +508,26 @@ Audio-Playground supports two backends for SAMAudio processing:
 
 ## Feature Comparison
 
-| Feature | PyTorch | MLX |
-|---------|---------|-----|
-| Platform Support | All (Linux/Mac/Windows) | Apple Silicon only (M1/M2/M3/M4) |
-| ODE Solver Control | ❌ No | ✅ Yes |
-| Solver Methods | Fixed (midpoint) | euler, midpoint |
-| Solver Steps Control | ❌ No | ✅ Yes (1-100 steps) |
-| Text Feature Caching | ❌ No | ✅ Yes |
-| Relative Speed (2min audio) | 1x (baseline) | 3-6x faster |
+| Feature                     | PyTorch                 | MLX                              |
+| --------------------------- | ----------------------- | -------------------------------- |
+| Platform Support            | All (Linux/Mac/Windows) | Apple Silicon only (M1/M2/M3/M4) |
+| ODE Solver Control          | ❌ No                   | ✅ Yes                           |
+| Solver Methods              | Fixed (midpoint)        | euler, midpoint                  |
+| Solver Steps Control        | ❌ No                   | ✅ Yes (1-100 steps)             |
+| Text Feature Caching        | ❌ No                   | ✅ Yes                           |
+| Relative Speed (2min audio) | 1x (baseline)           | 3-6x faster                      |
 
 ## Installation
 
 ### PyTorch (Default)
+
 ```bash
 pip install -e .
 ```
+````
 
 ### MLX (Apple Silicon Only)
+
 ```bash
 pip install -e .
 pip install mlx-audio  # Adds MLX backend support
@@ -522,12 +536,14 @@ pip install mlx-audio  # Adds MLX backend support
 ## Usage
 
 ### Auto-Detection (Recommended)
+
 ```bash
 # Automatically uses MLX on Apple Silicon if available
 audio-playground extract sam-audio --src input.mp4
 ```
 
 ### Force Specific Backend
+
 ```bash
 # Force MLX (errors if not on Apple Silicon)
 audio-playground extract sam-audio --src input.mp4 --backend mlx
@@ -539,6 +555,7 @@ audio-playground extract sam-audio --src input.mp4 --backend pytorch
 ### ODE Solver Control (MLX Only)
 
 **Euler Method (2x faster, lower quality):**
+
 ```bash
 audio-playground extract sam-audio \
   --src input.mp4 \
@@ -548,6 +565,7 @@ audio-playground extract sam-audio \
 ```
 
 **Midpoint Method (higher quality, slower):**
+
 ```bash
 audio-playground extract sam-audio \
   --src input.mp4 \
@@ -560,23 +578,25 @@ audio-playground extract sam-audio \
 
 Tested on 2-minute audio file:
 
-| Platform | Backend | Solver | Steps | Time | Speedup |
-|----------|---------|--------|-------|------|---------|
-| Mac M1 | PyTorch | (fixed) | (fixed) | 360s | 1.0x |
-| Mac M1 | MLX | midpoint | 32 | 100s | 3.6x |
-| Mac M1 | MLX | euler | 16 | 60s | 6.0x |
-| Mac M3 | MLX | midpoint | 32 | 75s | 4.8x |
-| Mac M3 | MLX | euler | 16 | 45s | 8.0x |
-| Linux GPU (RTX 3090) | PyTorch | (fixed) | (fixed) | 200s | 1.8x |
-| CPU (Intel i9) | PyTorch | (fixed) | (fixed) | 600s | 0.6x |
+| Platform             | Backend | Solver   | Steps   | Time | Speedup |
+| -------------------- | ------- | -------- | ------- | ---- | ------- |
+| Mac M1               | PyTorch | (fixed)  | (fixed) | 360s | 1.0x    |
+| Mac M1               | MLX     | midpoint | 32      | 100s | 3.6x    |
+| Mac M1               | MLX     | euler    | 16      | 60s  | 6.0x    |
+| Mac M3               | MLX     | midpoint | 32      | 75s  | 4.8x    |
+| Mac M3               | MLX     | euler    | 16      | 45s  | 8.0x    |
+| Linux GPU (RTX 3090) | PyTorch | (fixed)  | (fixed) | 200s | 1.8x    |
+| CPU (Intel i9)       | PyTorch | (fixed)  | (fixed) | 600s | 0.6x    |
 
 ## Quality vs Speed Tradeoffs
 
 **Solver Method:**
+
 - **Midpoint:** Higher quality, 2x slower (2 forward passes per step)
 - **Euler:** Lower quality, 2x faster (1 forward pass per step)
 
 **Solver Steps:**
+
 - **32 steps:** Default, good quality
 - **16 steps:** 2x faster, slight quality loss
 - **8 steps:** 4x faster, noticeable artifacts
@@ -591,21 +611,26 @@ Tested on 2-minute audio file:
 ## Troubleshooting
 
 ### "MLX backend not available"
+
 - MLX only works on Apple Silicon (M1/M2/M3/M4)
 - Install with: `pip install mlx-audio`
 - Check: `python -c "import mlx_audio; print('MLX OK')"`
 
 ### "Solver configuration ignored"
+
 - Solver control only works with MLX backend
 - Add `--backend mlx` to enable solver control
 - PyTorch backend currently doesn't expose solver parameters
 
 ### Fallback Behavior
+
 If you request MLX but it's not available, the system will:
+
 1. Log a warning
 2. Automatically fall back to PyTorch
 3. Continue processing (solver config will be ignored)
-```
+
+````
 
 **Update README.md:**
 
@@ -695,7 +720,8 @@ If PyTorch SAMAudio doesn't expose solver parameters, we could reimplement the O
   @click.option("--temp-dir", type=click.Path(), help="...")
   def common_config_options(func):
       """Decorator for shared config flags."""
-  ```
+````
+
 - **Usage:** Apply to all commands to avoid repetition
 - **Test:** Verify each command respects `--device`, `--log-level`, etc.
 
@@ -731,8 +757,6 @@ If PyTorch SAMAudio doesn't expose solver parameters, we could reimplement the O
 
 **Exit Criteria:** All atomic commands functional; both composite commands work; performance optimizations tested; backend abstraction complete; common options standardized
 
-**Next Step:** Implement Phase 5 (MLX Backend Integration)
-
 ### Additional Improvements
 
 **CI/CD Enhancements:** ✅ Complete
@@ -747,7 +771,29 @@ If PyTorch SAMAudio doesn't expose solver parameters, we could reimplement the O
 
 ### Goal
 
-Avoid re-processing identical inputs by caching segment files and metadata.
+Avoid re-processing identical inputs by caching segment files and metadata. Caches should be by sub-command. So the command `extract sam-audio` contains the steps convert, create chunks [1...N], process[chunk x], concatenate [chuncks]. Each one of the commands should be in the cache, and the artifacts should be in a folder named as a hash of the arguments
+
+```mermaid
+cache
+├── convert
+│   ├── hash1
+│   ├── ...
+│   └── hashN
+├── create chunks
+│   ├── hash1
+│   ├── ...
+│   └── hashN
+├── process chunk with sam-audio
+│   ├── hash1
+│   ├── ...
+│   └── hashN
+└── process chunk with sam-audio
+    ├── hash1
+    ├── ...
+    └── hashN
+```
+
+24 directories
 
 ### Step 7.1: Create cache manifest format
 
@@ -938,6 +984,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
 - **File:** `audio_playground/cli/batch.py` (new)
 - **Goal:** Process multiple files in a directory automatically
 - **Implementation:**
+
   ```python
   @click.command()
   @click.option("--input-dir", type=click.Path(exists=True, file_okay=False))
@@ -955,6 +1002,7 @@ Allow users to define pipelines as YAML and run with `audio-playground run --con
       3. Save to output-dir/{filename}/
       """
   ```
+
 - **Benefits:**
   - Process entire directories of audio files
   - Useful for dataset preparation
@@ -995,12 +1043,14 @@ claude/implement-phase-4-RV4DO
 ### Step 9.1: Setup ReadTheDocs Infrastructure
 
 **Files:**
+
 - `docs/conf.py` (Sphinx configuration)
 - `docs/index.rst` (main documentation index)
 - `.readthedocs.yaml` (RTD build configuration)
 - `docs/requirements.txt` (documentation dependencies)
 
 **Setup:**
+
 ```yaml
 # .readthedocs.yaml
 version: 2
@@ -1018,6 +1068,7 @@ python:
 ```
 
 **Dependencies:**
+
 ```
 # docs/requirements.txt
 sphinx>=7.0
@@ -1030,6 +1081,7 @@ sphinx-autodoc-typehints
 ### Step 9.2: Create Documentation Structure
 
 **Files to Create:**
+
 - `docs/index.rst` - Landing page
 - `docs/installation.rst` - Installation guide (all platforms)
 - `docs/installation_m1.rst` - M1/M2/M3 specific guide (based on blog post)
@@ -1043,6 +1095,7 @@ sphinx-autodoc-typehints
 - `docs/changelog.rst` - Version history
 
 **Documentation Structure:**
+
 ```
 docs/
 ├── index.rst                    # Landing page
@@ -1077,6 +1130,7 @@ docs/
 **Based on:** <https://gotofritz.net/blog/2025-12-20-playing-with-the-sam-audio-model-on-my-m1-macbook/>
 
 **Content Outline:**
+
 ```rst
 Apple Silicon (M1/M2/M3/M4) Installation
 ========================================
@@ -1170,6 +1224,7 @@ autodoc_default_options = {
 ```
 
 **Generate API docs:**
+
 ```bash
 # Auto-generate API reference
 sphinx-apidoc -o docs/api src/audio_playground
@@ -1180,6 +1235,7 @@ sphinx-apidoc -o docs/api src/audio_playground
 **File:** `docs/tutorials/basic_extraction.rst`
 
 **Content:**
+
 ```rst
 Tutorial 1: Basic Audio Extraction
 ===================================
@@ -1300,6 +1356,7 @@ Convert Commands
 **File:** `docs/user_guide/troubleshooting.rst`
 
 **Content:**
+
 ```rst
 Troubleshooting Guide
 =====================
@@ -1339,6 +1396,7 @@ Common Issues and Solutions
 ### Step 9.8: Convert Existing Markdown Docs
 
 **Migrate existing docs:**
+
 - `BACKENDS.md` → `docs/user_guide/backends.rst`
 - `WORKFLOWS.md` → `docs/user_guide/workflows.rst`
 - Update README.md to point to ReadTheDocs
@@ -1346,6 +1404,7 @@ Common Issues and Solutions
 ### Step 9.9: Build and Deploy
 
 **Local testing:**
+
 ```bash
 cd docs
 make html
@@ -1353,6 +1412,7 @@ open _build/html/index.html
 ```
 
 **ReadTheDocs Setup:**
+
 1. Link GitHub repository to ReadTheDocs
 2. Configure webhook for auto-builds on push
 3. Set up versioning (stable = main, latest = dev)
