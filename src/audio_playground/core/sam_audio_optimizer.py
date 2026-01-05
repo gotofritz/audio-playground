@@ -219,9 +219,12 @@ def process_long_audio(
     import torchaudio
 
     # Load audio metadata to determine total duration
-    info = torchaudio.info(audio_path.as_posix())
-    sample_rate = info.sample_rate
-    total_duration = info.num_frames / sample_rate
+    # Using soundfile which is a torchaudio dependency and has cross-version compatibility
+    import soundfile as sf
+
+    info = sf.info(audio_path.as_posix())
+    sample_rate = info.samplerate
+    total_duration = info.duration
 
     logger.info(
         f"Processing {audio_path.name}: duration={total_duration:.1f}s, "
@@ -247,7 +250,8 @@ def process_long_audio(
     hop_samples = chunk_samples - overlap_samples
 
     # Calculate number of chunks needed
-    num_chunks = math.ceil((info.num_frames - overlap_samples) / hop_samples)
+    num_frames = info.frames
+    num_chunks = math.ceil((num_frames - overlap_samples) / hop_samples)
 
     logger.info(f"Will process {num_chunks} chunks with {overlap_duration}s overlap")
 
@@ -260,7 +264,7 @@ def process_long_audio(
     # Process chunks
     for chunk_idx in range(num_chunks):
         start_sample = chunk_idx * hop_samples
-        end_sample = min(start_sample + chunk_samples, info.num_frames)
+        end_sample = min(start_sample + chunk_samples, num_frames)
 
         start_time = start_sample / sample_rate
         end_time = end_sample / sample_rate
@@ -379,13 +383,16 @@ def process_streaming(
     import torch
     import torchaudio
 
-    # Load audio metadata
-    info = torchaudio.info(audio_path.as_posix())
-    sample_rate = info.sample_rate
-    total_duration = info.num_frames / sample_rate
+    # Load audio metadata using soundfile for cross-version compatibility
+    import soundfile as sf
+
+    info = sf.info(audio_path.as_posix())
+    sample_rate = info.samplerate
+    total_duration = info.duration
+    num_frames = info.frames
 
     chunk_samples = int(chunk_duration * sample_rate)
-    num_chunks = math.ceil(info.num_frames / chunk_samples)
+    num_chunks = math.ceil(num_frames / chunk_samples)
 
     logger.info(
         f"Streaming {audio_path.name}: duration={total_duration:.1f}s, "
@@ -394,7 +401,7 @@ def process_streaming(
 
     for chunk_idx in range(num_chunks):
         start_sample = chunk_idx * chunk_samples
-        end_sample = min(start_sample + chunk_samples, info.num_frames)
+        end_sample = min(start_sample + chunk_samples, num_frames)
 
         logger.debug(f"Streaming chunk {chunk_idx + 1}/{num_chunks}")
 

@@ -256,12 +256,13 @@ class TestProcessLongAudio:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        # Mock torchaudio.info to return audio metadata
+        # Mock soundfile.info to return audio metadata
         mock_info = MagicMock()
-        mock_info.sample_rate = 44100
-        mock_info.num_frames = 220500  # 5 seconds at 44100 Hz
+        mock_info.samplerate = 44100
+        mock_info.frames = 220500  # 5 seconds at 44100 Hz
+        mock_info.duration = 5.0
 
-        with patch("torchaudio.info", return_value=mock_info):
+        with patch("soundfile.info", return_value=mock_info):
             results = process_long_audio(
                 audio_path=temp_audio_file,
                 prompts=prompts,
@@ -304,12 +305,13 @@ class TestProcessLongAudio:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        # Mock torchaudio.info for long audio
+        # Mock soundfile.info for long audio
         mock_info = MagicMock()
-        mock_info.sample_rate = sample_rate
-        mock_info.num_frames = int(sample_rate * duration)  # 60 seconds
+        mock_info.samplerate = sample_rate
+        mock_info.frames = int(sample_rate * duration)  # 60 seconds
+        mock_info.duration = duration
 
-        with patch("torchaudio.info", return_value=mock_info):
+        with patch("soundfile.info", return_value=mock_info):
             with patch("torchaudio.load") as mock_load:
                 # Mock loading chunks
                 mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
@@ -348,13 +350,14 @@ class TestProcessStreaming:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        # Mock torchaudio.info to return audio metadata
+        # Mock soundfile.info to return audio metadata
         mock_info = MagicMock()
-        mock_info.sample_rate = 44100
-        mock_info.num_frames = 220500  # 5 seconds at 44100 Hz
+        mock_info.samplerate = 44100
+        mock_info.frames = 220500  # 5 seconds at 44100 Hz
+        mock_info.duration = 5.0
 
-        # Mock torchaudio.load for chunk loading
-        with patch("torchaudio.info", return_value=mock_info):
+        # Mock soundfile.info for chunk loading
+        with patch("soundfile.info", return_value=mock_info):
             with patch("torchaudio.load", return_value=(torch.randn(1, 661500), 44100)):
                 with patch("torchaudio.save"):  # Mock save to avoid file I/O
                     chunks_received = []
