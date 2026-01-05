@@ -167,7 +167,9 @@ def process_long_audio(
 
     logger.info(f"=== Step 1/2: Creating {num_chunks} audio chunks ===")
     for chunk_idx, (start_sample, end_sample, start_time, end_time) in enumerate(boundaries):
-        logger.info(f"Creating chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s")
+        logger.info(
+            f"Creating chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s"
+        )
 
         # Load chunk using soundfile (avoids torchcodec dependency)
         waveform_np, sr = sf.read(
