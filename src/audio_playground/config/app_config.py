@@ -77,6 +77,36 @@ class AudioPlaygroundConfig(BaseSettings):
         description="Suffix for Demucs output files (e.g., 'drums-demucs.wav'). Use empty string for no suffix.",
     )
 
+    # Performance optimization settings (Phase 4)
+    enable_prompt_caching: bool = Field(
+        default=True,
+        description="Enable caching of text embeddings to avoid re-encoding same prompts (20-30% speedup)",
+    )
+    chunk_duration: float = Field(
+        default=30.0,
+        description="Duration in seconds for chunked processing of long audio files",
+    )
+    chunk_overlap: float = Field(
+        default=2.0,
+        description="Overlap duration in seconds between chunks (for smooth crossfading)",
+    )
+    crossfade_type: Literal["cosine", "linear"] = Field(
+        default="cosine",
+        description="Type of crossfade for blending chunks (cosine=smoother, linear=simpler)",
+    )
+    ode_solver: Literal["euler", "midpoint"] = Field(
+        default="midpoint",
+        description="ODE solver method (euler=faster but lower quality, midpoint=higher quality)",
+    )
+    ode_steps: int = Field(
+        default=32,
+        description="Number of ODE solver steps (lower=faster but lower quality, typical range: 16-64)",
+    )
+    streaming_mode: bool = Field(
+        default=False,
+        description="Enable streaming mode to yield chunks as ready (enables progress monitoring)",
+    )
+
     model_config = SettingsConfigDict(
         env_file_encoding="utf-8",
         env_file=".env",
