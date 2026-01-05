@@ -280,7 +280,8 @@ def process_long_audio(
 
         # Save temporary chunk file (SAMAudio requires file path)
         temp_chunk_path = audio_path.parent / f"_temp_chunk_{chunk_idx}.wav"
-        torchaudio.save(temp_chunk_path.as_posix(), waveform, sr)
+        # Use soundfile for better compatibility (torchaudio.save requires torchcodec)
+        sf.write(temp_chunk_path.as_posix(), waveform.numpy().T, sr)
 
         try:
             # Process chunk
@@ -404,7 +405,8 @@ def process_streaming(
 
         # Save temporary chunk file
         temp_chunk_path = audio_path.parent / f"_temp_stream_chunk_{chunk_idx}.wav"
-        torchaudio.save(temp_chunk_path.as_posix(), waveform, sr)
+        # Use soundfile for better compatibility (torchaudio.save requires torchcodec)
+        sf.write(temp_chunk_path.as_posix(), waveform.numpy().T, sr)
 
         try:
             # Process chunk
