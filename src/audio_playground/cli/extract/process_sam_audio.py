@@ -115,8 +115,9 @@ def process_segments_with_sam_audio(
     """
     # Lazy imports for performance
     import torch
-    import torchaudio
     from sam_audio import SAMAudio, SAMAudioProcessor
+
+    import soundfile as sf
 
     from audio_playground.core.sam_audio_optimizer import (
         SolverConfig,
@@ -176,8 +177,10 @@ def process_segments_with_sam_audio(
                         output_path = output_dir / output_filename
 
                         concatenated = torch.cat(chunks, dim=1)
-                        # Move to CPU before saving (MPS doesn't support torchaudio.save)
-                        torchaudio.save(output_path.as_posix(), concatenated.cpu(), sr)
+                        # Move to CPU before saving (MPS doesn't support file I/O)
+                        # Use soundfile instead of torchaudio for better compatibility
+                        audio_np = concatenated.cpu().numpy()
+                        sf.write(output_path.as_posix(), audio_np.T, sr)  # Transpose: soundfile expects (samples, channels)
                         logger.debug(f"Saved: {output_path}")
 
             else:
@@ -206,8 +209,10 @@ def process_segments_with_sam_audio(
                     if audio_tensor.dim() == 1:
                         audio_tensor = audio_tensor.unsqueeze(0)
 
-                    # Move to CPU before saving (MPS doesn't support torchaudio.save)
-                    torchaudio.save(output_path.as_posix(), audio_tensor.cpu(), sr)
+                    # Move to CPU before saving (MPS doesn't support file I/O)
+                    # Use soundfile instead of torchaudio for better compatibility
+                    audio_np = audio_tensor.cpu().numpy()
+                    sf.write(output_path.as_posix(), audio_np.T, sr)  # Transpose: soundfile expects (samples, channels)
                     logger.debug(f"Saved: {output_path}")
 
             logger.info(f"Completed processing {audio_path.name}")

@@ -359,7 +359,7 @@ class TestProcessStreaming:
         # Mock soundfile.info for chunk loading
         with patch("soundfile.info", return_value=mock_info):
             with patch("torchaudio.load", return_value=(torch.randn(1, 661500), 44100)):
-                with patch("torchaudio.save"):  # Mock save to avoid file I/O
+                with patch("soundfile.write"):  # Mock save to avoid file I/O
                     chunks_received = []
                     for prompt, chunk_audio, chunk_idx in process_streaming(
                         audio_path=temp_audio_file,
