@@ -138,6 +138,12 @@ def demucs(
         convert_to_wav(src, wav_file)
         logger.info(f"Converted to: {wav_file}")
 
+        # Track total audio duration for performance metrics
+        from audio_playground.core.wav_converter import load_audio_duration
+
+        audio_duration = load_audio_duration(wav_file)
+        tracker.add_metadata("audio_duration_seconds", round(audio_duration, 2))
+
         # Step 2: Process with Demucs
         logger.info("=== Step 2/2: Processing with Demucs ===")
 

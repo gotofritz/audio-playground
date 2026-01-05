@@ -37,7 +37,7 @@ class PerformanceMetrics:
 
     def to_dict(self) -> dict[str, Any]:
         """Convert metrics to dictionary for YAML serialization."""
-        return {
+        result = {
             "command": self.command_name,
             "execution_time": {
                 "duration_seconds": round(self.duration_seconds or 0.0, 3),
@@ -51,6 +51,22 @@ class PerformanceMetrics:
             "metadata": self.additional_metadata,
         }
 
+        # Calculate realtime factor if audio duration is available
+        if (
+            "audio_duration_seconds" in self.additional_metadata
+            and self.duration_seconds
+            and self.duration_seconds > 0
+        ):
+            audio_duration = self.additional_metadata["audio_duration_seconds"]
+            if audio_duration > 0:
+                realtime_factor = audio_duration / self.duration_seconds
+                result["performance"] = {
+                    "realtime_factor": round(realtime_factor, 2),
+                    "speed_description": self._describe_speed(realtime_factor),
+                }
+
+        return result
+
     @staticmethod
     def _format_duration(seconds: float) -> str:
         """Format duration in human-readable format."""
@@ -63,6 +79,18 @@ class PerformanceMetrics:
         hours = minutes // 60
         minutes = minutes % 60
         return f"{hours}h {minutes}m {secs:.0f}s"
+
+    @staticmethod
+    def _describe_speed(realtime_factor: float) -> str:
+        """Describe processing speed in human-readable format."""
+        if realtime_factor >= 2.0:
+            return f"{realtime_factor:.1f}x faster than realtime"
+        elif realtime_factor >= 1.0:
+            return f"{realtime_factor:.1f}x realtime (faster)"
+        elif realtime_factor >= 0.5:
+            return f"{1 / realtime_factor:.1f}x slower than realtime"
+        else:
+            return f"{1 / realtime_factor:.1f}x slower than realtime (very slow)"
 
 
 class PerformanceTracker:

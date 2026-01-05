@@ -48,8 +48,12 @@ def to_wav(
         # Convert the file
         convert_to_wav_fn(src, target)
 
-        # Track file size
+        # Track audio duration and file size
         if target.exists():
+            from audio_playground.core.wav_converter import load_audio_duration
+
+            audio_duration = load_audio_duration(target)
+            tracker.add_metadata("audio_duration_seconds", round(audio_duration, 2))
             tracker.add_metadata("output_size_mb", round(target.stat().st_size / (1024 * 1024), 2))
 
         click.echo(f"Conversion complete. Output saved to {target}")

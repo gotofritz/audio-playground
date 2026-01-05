@@ -85,7 +85,6 @@ def sam_audio(
     tracker: PerformanceTracker | None = None
 
     try:
-
         # Override config with CLI arguments if provided
         if src:
             config.source_file = src
@@ -166,10 +165,12 @@ def sam_audio(
             convert_to_wav(src_path, wav_file)
             logger.info(f"Converted to: {wav_file}")
 
+            # Track total audio duration for performance metrics
+            total_duration = load_audio_duration(wav_file)
+            tracker.add_metadata("audio_duration_seconds", round(total_duration, 2))
+
             # Step 2: Segment audio
             logger.info("=== Step 2/4: Segmenting audio ===")
-
-            total_duration = load_audio_duration(wav_file)
             logger.info(f"Total audio length: {total_duration:.2f} seconds")
 
             segment_lengths = create_segments(

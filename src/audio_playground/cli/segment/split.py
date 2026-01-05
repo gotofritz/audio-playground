@@ -76,11 +76,15 @@ def split(
 
         # Add final metadata
         tracker.add_metadata("segments_created", len(segment_files))
-        tracker.add_metadata("segment_lengths", [round(l, 2) for l in segment_lengths])
+        tracker.add_metadata(
+            "segment_lengths", [round(length, 2) for length in segment_lengths]
+        )
 
         # Report results
         click.echo(f"\nCreated {len(segment_files)} segments:")
-        for i, (seg_file, (start_time, duration)) in enumerate(zip(segment_files, segment_metadata)):
+        for i, (seg_file, (start_time, duration)) in enumerate(
+            zip(segment_files, segment_metadata)
+        ):
             click.echo(f"  {seg_file.name}: start={start_time:.2f}s, duration={duration:.2f}s")
 
         click.echo(f"\nMetadata saved to: {output_dir / 'segment_metadata.json'}")

@@ -49,7 +49,9 @@ def concat(
         segment_files = sorted(input_dir.glob(pattern))
 
         if not segment_files:
-            click.echo(f"Error: No files found matching pattern '{pattern}' in {input_dir}", err=True)
+            click.echo(
+                f"Error: No files found matching pattern '{pattern}' in {input_dir}", err=True
+            )
             raise click.Abort()
 
         # Add metadata
@@ -82,6 +84,10 @@ def concat(
         tracker.add_metadata("target_file", str(target))
         tracker.add_metadata("sample_rate", int(sample_rate))
         if target.exists():
+            from audio_playground.core.wav_converter import load_audio_duration
+
+            audio_duration = load_audio_duration(target)
+            tracker.add_metadata("audio_duration_seconds", round(audio_duration, 2))
             tracker.add_metadata("output_size_mb", round(target.stat().st_size / (1024 * 1024), 2))
 
         click.echo(f"\nSuccessfully concatenated to: {target}")
