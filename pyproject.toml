@@ -19,7 +19,7 @@ exclude_also = ["if TYPE_CHECKING:"]
 omit = ["tests/*", "*/tests/*"]
 
 [tool.ty] # https://docs.astral.sh/ty/
-rules.unresolved-import = "off"
+rules.unresolved-import = "ignore"
 
 [tool.pytest.ini_options] # https://docs.pytest.org/en/latest/reference/reference.html#ini-options-ref
 testpaths = ["tests"]
