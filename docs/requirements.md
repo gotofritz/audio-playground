@@ -12,13 +12,13 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 4 Complete | Ready for Phase 5
+**Current Phase:** Phase 3 Complete | Ready for Phase 4
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
 - ✅ Phase 2: Complete (All atomic and composite commands implemented)
 - ✅ Phase 3: Complete (Restructured to src layout, replaced mypy with ty)
-- ✅ Phase 4: Complete (PyTorch performance optimizations implemented)
+- ⏳ Phase 4: Not Started (Performance profiling & terminology rationalization)
 - ⏳ Phase 5: Not Started
 - ⏳ Phase 6: Not Started
 - ⏳ Phase 7: Not Started
@@ -43,7 +43,7 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 ### Goal
 
 Break `extract sam-audio` into reusable commands: `convert`, `segment`, `merge`.
-Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process-demucs` commands were created but later removed in Phase 4 refactoring when chunking was moved into the optimizer.
+Support both SAM-Audio and Demucs models.
 
 ### Step 2.1: Create `convert` command ✅
 
@@ -57,47 +57,153 @@ Support both SAM-Audio and Demucs models. Note: `process-sam-audio` and `process
 
 **Status:** ✅ Complete - Created `cli/merge/concat.py` wrapping `concatenate_segments()` from `core/merger.py`. Supports glob patterns. Auto-detects sample rate from first file.
 
-### Step 2.4: Create `extract process-sam-audio` command ✅ [DEPRECATED]
+### Step 2.4: Create `extract process-sam-audio` command ✅ [TO BE DEPRECATED]
 
-**Status:** ⚠️ Deprecated - Originally created `cli/extract/process_sam_audio.py` for processing audio segments. This command was removed in Phase 4 architectural refactoring when file-based segmentation was replaced with in-memory chunking in the optimizer.
+**Status:** ✅ Complete - Created `cli/extract/process_sam_audio.py` for processing audio segments. This command is scheduled for removal in Phase 4 as it creates an unnecessary intermediate step.
 
-### Step 2.5: Create `extract process-demucs` command ✅ [DEPRECATED]
+### Step 2.5: Create `extract process-demucs` command ✅ [TO BE DEPRECATED]
 
-**Status:** ⚠️ Deprecated - Originally created `cli/extract/process_demucs.py`. The processing logic was moved to `core/demucs_processor.py` and the CLI command was removed in Phase 4 refactoring.
+**Status:** ✅ Complete - Created `cli/extract/process_demucs.py`. This command is scheduled for removal in Phase 4 as it creates an unnecessary intermediate step.
 
 ### Step 2.6: Make `extract sam-audio` a Composite Command ✅
 
-**Status:** ✅ Complete - Refactored `extract sam-audio` to directly call the optimizer without intermediate file-based segmentation. Workflow simplified from 4 steps (convert → segment → process → merge) to 3 steps (convert → process with chunking → save). The optimizer handles chunking internally.
+**Status:** ✅ Complete - Created `cli/extract/sam_audio.py` composite command that chains together: convert → segment → process-sam-audio → merge. Provides end-to-end workflow with single command.
 
 ### Step 2.7: Create `extract demucs` Composite Command ✅
 
-**Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command for full Demucs pipeline: convert to-wav → process with demucs (using core/demucs_processor.py). Simplified workflow for stem separation.
+**Status:** ✅ Complete - Created `cli/extract/demucs.py` composite command that chains together: convert → segment → process-demucs → merge. Provides end-to-end workflow for Demucs stem separation.
 
 ## ✅ Phase 3: Restructure to src Layout
 
 **Status:** ✅ Complete - Moved `audio_playground/` to `src/audio_playground/`. Updated `pyproject.toml` with `where = ["src"]`. Replaced mypy with ty for type checking.
 
-## ✅ Phase 4: PyTorch Performance Optimizations & Architectural Refactoring
+## ⏳ Phase 4: Performance Profiling & Terminology Rationalization
 
-**Status:** ✅ Complete - Implemented platform-agnostic performance optimizations and eliminated redundant two-level chunking architecture.
+**Status:** Not Started
 
-**Implementation Summary:**
+**Goals:**
+1. Add performance profiling to all CLI commands
+2. Rationalize terminology to use "chunk" consistently throughout the project
+3. Remove deprecated commands
+4. Add optional overlap support for chunk-based operations
+5. Clean up legacy arguments
 
-- ✅ Created `src/audio_playground/core/sam_audio_optimizer.py` with all optimization features
-- ✅ **Chunked Processing:** `process_long_audio()` processes long audio files in overlapping chunks with cosine/linear crossfade to avoid artifacts
-- ✅ **Streaming Mode:** `process_streaming()` yields chunks as ready, enabling progress monitoring and faster first results
-- ✅ **Memory Management:** `clear_caches()` and `get_memory_stats()` utilities for explicit cache clearing and monitoring
-- ✅ Updated `app_config.py` with performance optimization settings (chunk_duration, chunk_overlap, crossfade_type, ode_solver, ode_steps)
-- ✅ Added CLI options to `extract sam-audio` command: `--no-chunks`, `--solver`, `--solver-steps`, `--chunk-duration`, `--chunk-overlap`, `--crossfade-type`
-- ✅ **Architectural Refactoring:** Eliminated file-based segmentation in favor of direct optimizer integration. Removed redundant `process-sam-audio` and `process-demucs` CLI commands. Moved Demucs processing logic to `core/demucs_processor.py`.
-- ✅ **Performance Reporting:** Added `PerformanceTracker` for automatic performance metrics (time, memory, speedup) saved as YAML reports
-- ✅ Created comprehensive test suite in `tests/core/test_sam_audio_optimizer.py`
+### Step 4.1: Create Performance Profiler
 
-**Performance Benefits:**
+**Implementation:**
 
-- Chunked processing: Enables arbitrarily long audio files (previously limited by memory)
-- Streaming: First results available in ~10-15s instead of waiting for full file
-- Memory management: Reduces OOM errors on large files
+- Create `src/audio_playground/core/performance_tracker.py` with `PerformanceTracker` class
+- Track execution time, memory usage, and speedup metrics
+- Auto-generate performance reports as YAML files
+- Add `@performance_tracker` decorator for easy integration
+
+**Integration:**
+
+- Add performance tracking to every CLI command via decorator or context manager
+- Save reports to `--output-dir` or current directory
+- Include in test coverage
+
+**Files:**
+
+- `src/audio_playground/core/performance_tracker.py` (new)
+- Update all CLI commands in `src/audio_playground/cli/`
+
+### Step 4.2: Remove Deprecated Commands
+
+**Commands to Remove:**
+
+- `extract process-sam-audio` (if not already removed)
+- `extract process-demucs` (if not already removed)
+
+**Rationale:** These intermediate commands are not needed. Use the composite commands `extract sam-audio` and `extract demucs` instead.
+
+### Step 4.3: Rationalize Terminology - Use "Chunk" Consistently
+
+**Current Inconsistencies:**
+
+- "segments" vs "chunks"
+- `--window-size` vs `--chunk-duration`
+- Mixed usage in code, CLI, and documentation
+
+**Changes Required:**
+
+**CLI Options:**
+- Rename all `--window-size` to `--chunk-duration`
+- Rename all `--segment-*` to `--chunk-*`
+- Update `--max-segments` to `--max-chunks`
+
+**Code:**
+- Rename `segmenter.py` functions to use "chunk" terminology
+- Update `create_segments()` → `create_chunks()`
+- Update `split_to_files()` to output `chunk-NNN.wav` instead of `segment-NNN.wav`
+- Update variable names: `segment_*` → `chunk_*`
+
+**Documentation:**
+- Update all references in docstrings
+- Update README and requirements.md
+
+**Files:**
+- `src/audio_playground/core/segmenter.py` → possibly rename to `chunker.py`
+- All CLI commands using segment terminology
+- `docs/requirements.md`
+- `README.md`
+
+### Step 4.4: Add --no-chunks Option
+
+**Requirement:** If a command accepts a `--chunk-duration` argument, it should also accept a `--no-chunks` flag to disable chunking entirely.
+
+**Commands Affected:**
+- `segment split`
+- `extract sam-audio`
+- Any other command that processes audio in chunks
+
+**Implementation:**
+- Add `--no-chunks` as a boolean flag
+- When set, process entire audio file without splitting
+- Mutually exclusive with `--chunk-duration`, `--max-chunks`
+
+### Step 4.5: Add Optional Overlap Window for Chunks
+
+**Requirement:** Add overlap support to chunk-based operations to improve quality at chunk boundaries.
+
+**Commands Affected:**
+- `segment split` (both standalone and as 2nd step of `extract sam-audio`)
+- `merge concat` (both standalone and as final step of `extract sam-audio`)
+
+**New CLI Options:**
+- `--overlap-duration FLOAT`: Overlap in seconds between chunks (default: 0.0 = no overlap)
+- `--crossfade-type {linear|cosine}`: Crossfade algorithm for overlap blending (default: cosine)
+
+**Implementation:**
+
+**For `segment split`:**
+- Calculate overlapping chunk boundaries
+- Save overlapping chunks to files
+- Include overlap metadata in output JSON
+
+**For `merge concat`:**
+- Read overlap metadata from input
+- Apply crossfade blending in overlap regions
+- Use cosine or linear fade based on `--crossfade-type`
+
+**Files:**
+- `src/audio_playground/core/segmenter.py` - add overlap calculation
+- `src/audio_playground/core/merger.py` - add crossfade blending
+- `src/audio_playground/cli/segment/split.py`
+- `src/audio_playground/cli/merge/concat.py`
+
+### Step 4.6: Remove Legacy Arguments
+
+**Arguments to Remove:**
+
+- `--continue-from` (if still present in any commands)
+- Any other deprecated or unused arguments found during refactoring
+
+**Process:**
+- Search codebase for `continue_from`
+- Remove from CLI option definitions
+- Remove from function signatures
+- Update tests
 
 ---
 
