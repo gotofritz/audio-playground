@@ -204,18 +204,18 @@ def process_long_audio(
                 if chunk_idx > 0 and overlap_samples > 0:
                     fade_out, fade_in = create_crossfade_window(overlap_samples, crossfade_type)
 
-                    # Get the last chunk's overlapping tail
-                    prev_tail = outputs[prompt][-1][:, -overlap_samples:]
+                    # Get the last chunk's overlapping tail (1D audio tensor)
+                    prev_tail = outputs[prompt][-1][-overlap_samples:]
 
-                    # Get current chunk's overlapping head
-                    curr_head = chunk_result[:, :overlap_samples]
+                    # Get current chunk's overlapping head (1D audio tensor)
+                    curr_head = chunk_result[:overlap_samples]
 
                     # Blend the overlap region
                     blended = prev_tail * fade_out + curr_head * fade_in
 
                     # Replace the tail of previous chunk and head of current chunk
-                    outputs[prompt][-1] = outputs[prompt][-1][:, :-overlap_samples]
-                    chunk_result = torch.cat([blended, chunk_result[:, overlap_samples:]], dim=1)
+                    outputs[prompt][-1] = outputs[prompt][-1][:-overlap_samples]
+                    chunk_result = torch.cat([blended, chunk_result[overlap_samples:]], dim=0)
 
                 outputs[prompt].append(chunk_result)
 
@@ -227,8 +227,8 @@ def process_long_audio(
         # Clear GPU cache after each chunk
         clear_caches(device)
 
-    # Concatenate all chunks for each prompt
-    final_outputs = {prompt: torch.cat(chunks, dim=1) for prompt, chunks in outputs.items()}
+    # Concatenate all chunks for each prompt (1D audio tensors, concatenate along time dimension)
+    final_outputs = {prompt: torch.cat(chunks, dim=0) for prompt, chunks in outputs.items()}
 
     return final_outputs
 
