@@ -4,8 +4,8 @@ import math
 from unittest.mock import MagicMock, Mock, patch
 
 import pytest
+import soundfile as sf
 import torch
-import torchaudio
 
 
 @pytest.fixture
@@ -37,7 +37,7 @@ def temp_audio_file(tmp_path):
     waveform = torch.sin(2 * math.pi * frequency * t).unsqueeze(0)
 
     audio_path = tmp_path / "test_audio.wav"
-    torchaudio.save(audio_path.as_posix(), waveform, sample_rate)
+    sf.write(audio_path.as_posix(), waveform.numpy().T, sample_rate)
 
     return audio_path
 
@@ -288,7 +288,7 @@ class TestProcessLongAudio:
         t = torch.linspace(0, duration, int(sample_rate * duration))
         waveform = torch.sin(2 * math.pi * 440 * t).unsqueeze(0)
         audio_path = tmp_path / "long_audio.wav"
-        torchaudio.save(audio_path.as_posix(), waveform, sample_rate)
+        sf.write(audio_path.as_posix(), waveform.numpy().T, sample_rate)
 
         prompts = ["bass"]
 
