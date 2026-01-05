@@ -44,13 +44,6 @@ tasks:
       - test
       - lint
 
-  # Task to run linting and tests (CI - without ty since dependencies aren't installed)
-  qa-ci:
-    desc: "Run linting and tests for CI (without ty)"
-    deps:
-      - test
-      - ruff
-
   # Task to run tests using pytest with coverage reporting
   test:
     desc: "Run tests with coverage"

@@ -53,7 +53,7 @@ jobs:
       - name: Run QA checks
         shell: bash -el {0}
         run: |
-          task qa-ci
+          task qa
 
       - name: Generate coverage badge
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
