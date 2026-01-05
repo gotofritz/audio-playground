@@ -39,11 +39,11 @@ jobs:
           # Install other dependencies
           pip install pydub click rich pydantic pydantic-settings
 
-          # Install all dev dependencies from pyproject.toml
-          pip install copier commitizen faker mypy polyfactory pre-commit pytest pytest-cov pytest-datadir pytest-env ruff safety
-
-          # Install the package in editable mode (without sam-audio dependency for CI)
+          # Install the package in editable mode (skip sam-audio dependency for CI)
           pip install -e . --no-deps
+
+          # Extract and install dev dependencies from pyproject.toml
+          python -c "import tomllib; deps = tomllib.load(open('pyproject.toml', 'rb'))['project']['optional-dependencies']['dev']; print(' '.join(deps))" | xargs pip install
 
       - name: Install Task
         shell: bash -el {0}

@@ -24,18 +24,18 @@ tasks:
     cmds:
       - open tests/coverage/index.html
 
-  # Task to run all linting tasks (isort, mypy)
+  # Task to run all linting tasks (ruff, ty)
   lint:
     desc: "Run all linting tasks"
     deps:
       - ruff
-      - mypy
+      - ty
 
-  # Task to run MyPy for static type checking on the source code
-  mypy:
-    desc: "Run MyPy for static type checking"
+  # Task to run ty for static type checking on the source code
+  ty:
+    desc: "Run ty for static type checking"
     cmds:
-      - "{{.VENV}}/mypy --ignore-missing-imports {{.SOURCES}}"
+      - "{{.VENV}}/ty check src"
 
   # Task to run linting and tests
   qa:
