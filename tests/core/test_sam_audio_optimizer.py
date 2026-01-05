@@ -175,9 +175,10 @@ class TestCrossfadeWindow:
         assert fade_in[0] < 0.01
         assert fade_in[-1] > 0.99
 
-        # Check that they sum to approximately 1 (constant power crossfade)
-        crossfade_sum = fade_out + fade_in
-        assert torch.allclose(crossfade_sum, torch.ones_like(crossfade_sum), atol=0.01)
+        # For cosine crossfade, the squares should sum to 1 (constant power)
+        # This maintains equal loudness during the crossfade
+        power_sum = fade_out**2 + fade_in**2
+        assert torch.allclose(power_sum, torch.ones_like(power_sum), atol=0.01)
 
     def test_linear_crossfade(self):
         """Test linear crossfade window creation."""
@@ -255,15 +256,21 @@ class TestProcessLongAudio:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        results = process_long_audio(
-            audio_path=temp_audio_file,
-            prompts=prompts,
-            model=mock_model,
-            processor=mock_processor,
-            device="cpu",
-            chunk_duration=30.0,  # Longer than test audio
-            overlap_duration=2.0,
-        )
+        # Mock torchaudio.info to return audio metadata
+        mock_info = MagicMock()
+        mock_info.sample_rate = 44100
+        mock_info.num_frames = 220500  # 5 seconds at 44100 Hz
+
+        with patch("torchaudio.info", return_value=mock_info):
+            results = process_long_audio(
+                audio_path=temp_audio_file,
+                prompts=prompts,
+                model=mock_model,
+                processor=mock_processor,
+                device="cpu",
+                chunk_duration=30.0,  # Longer than test audio
+                overlap_duration=2.0,
+            )
 
         assert len(results) == len(prompts)
         # Model should be called once (no chunking)
@@ -297,19 +304,25 @@ class TestProcessLongAudio:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        with patch("torchaudio.load") as mock_load:
-            # Mock loading chunks
-            mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
+        # Mock torchaudio.info for long audio
+        mock_info = MagicMock()
+        mock_info.sample_rate = sample_rate
+        mock_info.num_frames = int(sample_rate * duration)  # 60 seconds
 
-            results = process_long_audio(
-                audio_path=audio_path,
-                prompts=prompts,
-                model=mock_model,
-                processor=mock_processor,
-                device="cpu",
-                chunk_duration=30.0,
-                overlap_duration=2.0,
-            )
+        with patch("torchaudio.info", return_value=mock_info):
+            with patch("torchaudio.load") as mock_load:
+                # Mock loading chunks
+                mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
+
+                results = process_long_audio(
+                    audio_path=audio_path,
+                    prompts=prompts,
+                    model=mock_model,
+                    processor=mock_processor,
+                    device="cpu",
+                    chunk_duration=30.0,
+                    overlap_duration=2.0,
+                )
 
         assert "bass" in results
         # Should have called model multiple times (once per chunk)
@@ -335,16 +348,25 @@ class TestProcessStreaming:
         mock_processor.return_value = mock_inputs
         mock_inputs.to.return_value = mock_inputs
 
-        chunks_received = []
-        for prompt, chunk_audio, chunk_idx in process_streaming(
-            audio_path=temp_audio_file,
-            prompts=prompts,
-            model=mock_model,
-            processor=mock_processor,
-            device="cpu",
-            chunk_duration=15.0,
-        ):
-            chunks_received.append((prompt, chunk_idx))
+        # Mock torchaudio.info to return audio metadata
+        mock_info = MagicMock()
+        mock_info.sample_rate = 44100
+        mock_info.num_frames = 220500  # 5 seconds at 44100 Hz
+
+        # Mock torchaudio.load for chunk loading
+        with patch("torchaudio.info", return_value=mock_info):
+            with patch("torchaudio.load", return_value=(torch.randn(1, 661500), 44100)):
+                with patch("torchaudio.save"):  # Mock save to avoid file I/O
+                    chunks_received = []
+                    for prompt, chunk_audio, chunk_idx in process_streaming(
+                        audio_path=temp_audio_file,
+                        prompts=prompts,
+                        model=mock_model,
+                        processor=mock_processor,
+                        device="cpu",
+                        chunk_duration=15.0,
+                    ):
+                        chunks_received.append((prompt, chunk_idx))
 
         # Should receive at least one chunk per prompt
         assert len(chunks_received) >= 1
