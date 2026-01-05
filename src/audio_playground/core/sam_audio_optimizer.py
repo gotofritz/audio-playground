@@ -159,14 +159,15 @@ def process_long_audio(
 
     logger.info(f"Will process {num_chunks} chunks with {overlap_duration}s overlap")
 
-    # Initialize output tensors
-    outputs: dict[str, list[Any]] = {prompt: [] for prompt in prompts}
+    # STEP 1: Create all chunk files upfront
+    import tempfile
 
-    # Process chunks
+    temp_dir = Path(tempfile.mkdtemp(prefix="sam_audio_chunks_"))
+    chunk_files: list[Path] = []
+
+    logger.info(f"=== Step 1/2: Creating {num_chunks} audio chunks ===")
     for chunk_idx, (start_sample, end_sample, start_time, end_time) in enumerate(boundaries):
-        logger.debug(
-            f"Processing chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s"
-        )
+        logger.info(f"Creating chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s")
 
         # Load chunk using soundfile (avoids torchcodec dependency)
         waveform_np, sr = sf.read(
@@ -176,15 +177,26 @@ def process_long_audio(
             dtype="float32",
         )
 
-        # Save temporary chunk file (SAMAudio requires file path)
-        temp_chunk_path = audio_path.parent / f"_temp_chunk_{chunk_idx}.wav"
-        # Use soundfile for compatibility
-        sf.write(temp_chunk_path.as_posix(), waveform_np, sr)
+        # Save chunk file in temp directory
+        chunk_path = temp_dir / f"chunk-{chunk_idx:03d}.wav"
+        sf.write(chunk_path.as_posix(), waveform_np, sr)
+        chunk_files.append(chunk_path)
 
-        try:
+    logger.info(f"Created {len(chunk_files)} chunks in {temp_dir}")
+
+    # STEP 2: Process all chunks with SAM-Audio
+    logger.info(f"=== Step 2/2: Processing {num_chunks} chunks with SAM-Audio ===")
+
+    # Initialize output tensors
+    outputs: dict[str, list[Any]] = {prompt: [] for prompt in prompts}
+
+    try:
+        for chunk_idx, chunk_path in enumerate(chunk_files):
+            logger.info(f"Processing chunk {chunk_idx + 1}/{num_chunks}: {chunk_path.name}")
+
             # Process chunk
             inputs = processor(  # type: ignore[call-non-callable]
-                audios=[temp_chunk_path.as_posix()] * len(prompts),
+                audios=[chunk_path.as_posix()] * len(prompts),
                 descriptions=prompts,
             ).to(device)
 
@@ -216,13 +228,15 @@ def process_long_audio(
 
                 outputs[prompt].append(chunk_result)
 
-        finally:
-            # Clean up temporary chunk file
-            if temp_chunk_path.exists():
-                temp_chunk_path.unlink()
+            # Clear GPU cache after each chunk
+            clear_caches(device)
 
-        # Clear GPU cache after each chunk
-        clear_caches(device)
+    finally:
+        # Clean up temporary chunks
+        import shutil
+
+        logger.info(f"Cleaning up temporary chunks in {temp_dir}")
+        shutil.rmtree(temp_dir, ignore_errors=True)
 
     # Concatenate all chunks for each prompt (1D audio tensors, concatenate along time dimension)
     final_outputs = {prompt: torch.cat(chunks, dim=0) for prompt, chunks in outputs.items()}
