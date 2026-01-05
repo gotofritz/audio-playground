@@ -51,6 +51,41 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
 )
 @max_segments_option()
 @window_size_option()
+@click.option(
+    "--streaming",
+    is_flag=True,
+    help="Enable streaming mode for progress monitoring during processing.",
+)
+@click.option(
+    "--solver",
+    type=click.Choice(["euler", "midpoint"]),
+    help="ODE solver method: 'euler' (2x faster) or 'midpoint' (higher quality, default).",
+)
+@click.option(
+    "--solver-steps",
+    type=int,
+    help="Number of ODE solver steps. Lower = faster but lower quality (default: 32).",
+)
+@click.option(
+    "--chunk-duration",
+    type=float,
+    help="Duration in seconds for each processing chunk (default: 30.0).",
+)
+@click.option(
+    "--chunk-overlap",
+    type=float,
+    help="Overlap duration in seconds between chunks for smooth transitions (default: 2.0).",
+)
+@click.option(
+    "--crossfade-type",
+    type=click.Choice(["cosine", "linear"]),
+    help="Crossfade type for blending chunks: 'cosine' (constant power, default) or 'linear'.",
+)
+@click.option(
+    "--no-prompt-cache",
+    is_flag=True,
+    help="Disable prompt caching (caching enabled by default for 20-30%% speedup).",
+)
 @click.pass_context
 def sam_audio(
     ctx: click.Context,
@@ -63,6 +98,13 @@ def sam_audio(
     sample_rate: int | None = None,
     max_segments: int | None = None,
     window_size: float | None = None,
+    streaming: bool = False,
+    solver: str | None = None,
+    solver_steps: int | None = None,
+    chunk_duration: float | None = None,
+    chunk_overlap: float | None = None,
+    crossfade_type: str | None = None,
+    no_prompt_cache: bool = False,
 ) -> None:
     """
     Composite command: Full SAM-Audio extraction pipeline.
@@ -196,6 +238,13 @@ def sam_audio(
             logger=logger,
             predict_spans=config.predict_spans,
             reranking_candidates=config.reranking_candidates,
+            streaming=streaming,
+            solver=solver or config.ode_solver,
+            solver_steps=solver_steps or config.ode_steps,
+            chunk_duration=chunk_duration or config.chunk_duration,
+            chunk_overlap=chunk_overlap or config.chunk_overlap,
+            crossfade_type=crossfade_type or config.crossfade_type,
+            enable_prompt_caching=not no_prompt_cache and config.enable_prompt_caching,
         )
 
         # Step 4: Merge segments and save final output
@@ -205,6 +254,7 @@ def sam_audio(
         target_path.mkdir(parents=True, exist_ok=True)
 
         # Merge processed segments for each prompt (import torchaudio lazily)
+        import soundfile as sf
         import torchaudio
 
         for prompt in config.prompts:
@@ -239,8 +289,9 @@ def sam_audio(
                 concatenated = resampler(concatenated)
                 sr = config.sample_rate
 
-            # Save output
-            torchaudio.save(output_path.as_posix(), concatenated, int(sr))
+            # Save output (move to CPU and convert to numpy for soundfile)
+            audio_np = concatenated.cpu().numpy()
+            sf.write(output_path.as_posix(), audio_np.T, int(sr))
             logger.info(f"Saved: {output_path}")
 
         # Handle residuals if chain_residuals is enabled

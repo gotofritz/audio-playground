@@ -109,10 +109,10 @@ All optimization options can be configured via CLI flags or environment variable
 Trade some quality for speed using Euler solver with fewer steps:
 
 ```sh
-audio-playground extract process-sam-audio \
-  --segment "./segments/*.wav" \
-  --prompts "bass,vocals,drums" \
+audio-playground extract sam-audio \
+  --src ./input.mp4 \
   --output-dir ./output \
+  --prompts bass --prompts vocals --prompts drums \
   --solver euler \
   --solver-steps 16 \
   --chunk-duration 20.0
@@ -126,10 +126,10 @@ audio-playground extract process-sam-audio \
 Use midpoint solver with more steps and longer chunks:
 
 ```sh
-audio-playground extract process-sam-audio \
-  --segment "./segments/*.wav" \
-  --prompts "bass,vocals,drums" \
+audio-playground extract sam-audio \
+  --src ./input.mp4 \
   --output-dir ./output \
+  --prompts bass --prompts vocals --prompts drums \
   --solver midpoint \
   --solver-steps 64 \
   --chunk-duration 45.0 \
