@@ -92,7 +92,7 @@ def process_long_audio(
     model: Any,
     processor: Any,
     device: str,
-    chunk_duration: float = 30.0,
+    chunk_duration: float = 10.0,
     overlap_duration: float = 2.0,
     crossfade_type: Literal["cosine", "linear"] = "cosine",
     solver_config: SolverConfig | None = None,
@@ -109,9 +109,9 @@ def process_long_audio(
         model: SAMAudio model instance
         processor: SAMAudioProcessor instance
         device: Device to use for processing
-        chunk_duration: Duration of each chunk in seconds (default: 30.0)
-        overlap_duration: Duration of overlap between chunks in seconds (default: 2.0)
-        crossfade_type: Type of crossfade ("cosine" or "linear")
+        chunk_duration: Duration of each chunk in seconds (default: 10.0, matches app_config)
+        overlap_duration: Duration of overlap between chunks in seconds (default: 2.0, matches app_config)
+        crossfade_type: Type of crossfade ("cosine" or "linear", default: "cosine", matches app_config)
         solver_config: Optional solver configuration (NOT YET SUPPORTED by SAMAudio API)
 
     Returns:
@@ -239,13 +239,13 @@ def process_streaming(
     model: Any,
     processor: Any,
     device: str,
-    chunk_duration: float = 15.0,
+    chunk_duration: float = 10.0,
     solver_config: SolverConfig | None = None,
 ) -> Generator[tuple[str, Any, int], None, None]:
     """Yield results chunk-by-chunk as they're ready.
 
     This enables interactive applications and progress monitoring, with first
-    audio available in ~10-15s instead of waiting for the full file to process.
+    audio available in ~10s instead of waiting for the full file to process.
 
     Args:
         audio_path: Path to audio file
@@ -253,7 +253,7 @@ def process_streaming(
         model: SAMAudio model instance
         processor: SAMAudioProcessor instance
         device: Device to use for processing
-        chunk_duration: Duration of each chunk in seconds (default: 15.0)
+        chunk_duration: Duration of each chunk in seconds (default: 10.0, matches app_config)
         solver_config: Optional solver configuration (NOT YET SUPPORTED by SAMAudio API)
 
     Yields:

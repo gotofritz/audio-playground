@@ -200,11 +200,11 @@ class TestProcessLongAudio:
 
         prompts = ["bass"]
 
-        # Mock the model to return chunks
+        # Mock the model to return chunks (1D tensors as SAMAudio does)
         def mock_separate(*args, **kwargs):
             result = MagicMock()
-            # Return a chunk of audio
-            result.target = [torch.randn(1, 1323000)]  # ~30 seconds
+            # Return a chunk of audio - 1D tensor for 10 seconds at 44100 Hz = 441000 samples
+            result.target = [torch.randn(441000)]
             return result
 
         mock_model.separate.side_effect = mock_separate
@@ -224,8 +224,9 @@ class TestProcessLongAudio:
             with patch("soundfile.write"):  # Mock file I/O
                 with patch("soundfile.read") as mock_read:
                     # Mock loading chunks - soundfile returns (data, samplerate) where data is numpy
+                    # 10s chunks = 441000 samples
                     mock_read.return_value = (
-                        torch.randn(1323000, 1).numpy(),
+                        torch.randn(441000, 1).numpy(),
                         sample_rate,
                     )
 
