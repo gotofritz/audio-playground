@@ -145,14 +145,18 @@ def process_long_audio(
         # Move to CPU before returning (MPS doesn't support torchaudio.save)
         return {prompt: result.target[i].cpu() for i, prompt in enumerate(prompts)}
 
-    # Calculate chunk parameters
-    chunk_samples = int(chunk_duration * sample_rate)
-    overlap_samples = int(overlap_duration * sample_rate)
-    hop_samples = chunk_samples - overlap_samples
+    # Use canonical chunking calculation from segmenter
+    from audio_playground.core.segmenter import calculate_chunk_boundaries
 
-    # Calculate number of chunks needed
-    num_frames = info.frames
-    num_chunks = math.ceil((num_frames - overlap_samples) / hop_samples)
+    boundaries = calculate_chunk_boundaries(
+        total_frames=info.frames,
+        sample_rate=sample_rate,
+        chunk_duration=chunk_duration,
+        overlap_duration=overlap_duration,
+    )
+
+    num_chunks = len(boundaries)
+    overlap_samples = int(overlap_duration * sample_rate)
 
     logger.info(f"Will process {num_chunks} chunks with {overlap_duration}s overlap")
 
@@ -160,13 +164,7 @@ def process_long_audio(
     outputs: dict[str, list[Any]] = {prompt: [] for prompt in prompts}
 
     # Process chunks
-    for chunk_idx in range(num_chunks):
-        start_sample = chunk_idx * hop_samples
-        end_sample = min(start_sample + chunk_samples, num_frames)
-
-        start_time = start_sample / sample_rate
-        end_time = end_sample / sample_rate
-
+    for chunk_idx, (start_sample, end_sample, start_time, end_time) in enumerate(boundaries):
         logger.debug(
             f"Processing chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s"
         )
