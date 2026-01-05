@@ -23,16 +23,6 @@ class AudioPlaygroundConfig(BaseSettings):
     temp_dir: Path = Path("/tmp/sam_audio_split")
     prompts: list[str] = ["bass"]
 
-    # Segment configuration
-    segment_window_size: float = Field(
-        default=10.0,
-        description="Fixed segment length in seconds. All segments except the last will be this size.",
-    )
-    max_segments: int | None = Field(
-        default=None,
-        description="Maximum number of segments to create (None = no limit). Useful for testing.",
-    )
-
     # Model configuration
     model_item: Model = Model.SMALL
     predict_spans: bool = False
