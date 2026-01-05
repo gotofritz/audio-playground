@@ -263,15 +263,16 @@ class TestProcessLongAudio:
         mock_info.duration = 5.0
 
         with patch("soundfile.info", return_value=mock_info):
-            results = process_long_audio(
-                audio_path=temp_audio_file,
-                prompts=prompts,
-                model=mock_model,
-                processor=mock_processor,
-                device="cpu",
-                chunk_duration=30.0,  # Longer than test audio
-                overlap_duration=2.0,
-            )
+            with patch("soundfile.write"):  # Mock file I/O
+                results = process_long_audio(
+                    audio_path=temp_audio_file,
+                    prompts=prompts,
+                    model=mock_model,
+                    processor=mock_processor,
+                    device="cpu",
+                    chunk_duration=30.0,  # Longer than test audio
+                    overlap_duration=2.0,
+                )
 
         assert len(results) == len(prompts)
         # Model should be called once (no chunking)
@@ -312,19 +313,20 @@ class TestProcessLongAudio:
         mock_info.duration = duration
 
         with patch("soundfile.info", return_value=mock_info):
-            with patch("torchaudio.load") as mock_load:
-                # Mock loading chunks
-                mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
+            with patch("soundfile.write"):  # Mock file I/O
+                with patch("torchaudio.load") as mock_load:
+                    # Mock loading chunks
+                    mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
 
-                results = process_long_audio(
-                    audio_path=audio_path,
-                    prompts=prompts,
-                    model=mock_model,
-                    processor=mock_processor,
-                    device="cpu",
-                    chunk_duration=30.0,
-                    overlap_duration=2.0,
-                )
+                    results = process_long_audio(
+                        audio_path=audio_path,
+                        prompts=prompts,
+                        model=mock_model,
+                        processor=mock_processor,
+                        device="cpu",
+                        chunk_duration=30.0,
+                        overlap_duration=2.0,
+                    )
 
         assert "bass" in results
         # Should have called model multiple times (once per chunk)
