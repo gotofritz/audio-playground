@@ -2,6 +2,7 @@
 
 import traceback
 import uuid
+from datetime import datetime
 from pathlib import Path
 
 import click
@@ -16,6 +17,7 @@ from audio_playground.cli.common import (
 from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
 from audio_playground.core.merger import concatenate_segments
+from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
@@ -158,6 +160,23 @@ def sam_audio(
         if config.max_segments:
             logger.info(f"Max segments: {config.max_segments}")
 
+        # Initialize and start performance tracking
+        perf_tracker = PerformanceTracker(
+            source_file=src_path or continue_from or "",
+            output_dir=config.target_dir,
+            device="auto",  # Will be updated when device is determined
+        )
+        perf_tracker.__enter__()
+
+        # Add metadata about configuration
+        perf_tracker.add_metadata("prompts", config.prompts)
+        perf_tracker.add_metadata("model", config.model_item.value)
+        perf_tracker.add_metadata("segment_window_size", config.segment_window_size)
+        if solver:
+            perf_tracker.add_metadata("solver", solver or config.ode_solver)
+        if solver_steps:
+            perf_tracker.add_metadata("solver_steps", solver_steps or config.ode_steps)
+
         # Determine temp directory
         if continue_from:
             logger.info(f"Continuing from: {continue_from}")
@@ -165,6 +184,9 @@ def sam_audio(
             wav_file = tmp_path / "audio.wav"
             if not wav_file.exists():
                 raise FileNotFoundError(f"Cannot continue: {wav_file} not found in {tmp_path}")
+            # Load audio duration for performance tracking
+            total_duration = load_audio_duration(wav_file)
+            perf_tracker.metrics.audio_duration_seconds = total_duration
         else:
             # Generate unique temp directory for this run
             run_id = str(uuid.uuid4())
@@ -188,6 +210,7 @@ def sam_audio(
 
             total_duration = load_audio_duration(wav_file)
             logger.info(f"Total audio length: {total_duration:.2f} seconds")
+            perf_tracker.metrics.audio_duration_seconds = total_duration
 
             segment_lengths = create_segments(
                 total_duration,
@@ -226,6 +249,9 @@ def sam_audio(
             )
             device = accelerator.type if accelerator is not None else "cpu"
             logger.info(f"Auto-detected device: {device}")
+
+        # Update performance tracker with actual device
+        perf_tracker.metrics.device = device
 
         # Process segments
         process_segments_with_sam_audio(
@@ -303,8 +329,15 @@ def sam_audio(
                 "This feature will be added in a future update."
             )
 
+        # Stop performance tracking and save report
+        perf_tracker.__exit__(None, None, None)
+        timestamp = datetime.now().strftime("%Y%m%d-%H%M%S")
+        report_path = tmp_path / f"report-{timestamp}-sam-audio.yml"
+        perf_tracker.save_report(report_path, format="yaml")
+
         logger.info("All done!")
         logger.info(f"Output saved to: {target_path}")
+        logger.info(f"Performance report: {report_path}")
 
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
