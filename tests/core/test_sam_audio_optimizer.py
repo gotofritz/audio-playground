@@ -314,9 +314,12 @@ class TestProcessLongAudio:
 
         with patch("soundfile.info", return_value=mock_info):
             with patch("soundfile.write"):  # Mock file I/O
-                with patch("torchaudio.load") as mock_load:
-                    # Mock loading chunks
-                    mock_load.return_value = (torch.randn(1, 1323000), sample_rate)
+                with patch("soundfile.read") as mock_read:
+                    # Mock loading chunks - soundfile returns (data, samplerate) where data is numpy
+                    mock_read.return_value = (
+                        torch.randn(1323000, 1).numpy(),
+                        sample_rate,
+                    )
 
                     results = process_long_audio(
                         audio_path=audio_path,
@@ -360,7 +363,9 @@ class TestProcessStreaming:
 
         # Mock soundfile.info for chunk loading
         with patch("soundfile.info", return_value=mock_info):
-            with patch("torchaudio.load", return_value=(torch.randn(1, 661500), 44100)):
+            with patch("soundfile.read") as mock_read:
+                # Mock loading chunks - soundfile returns (data, samplerate) where data is numpy
+                mock_read.return_value = (torch.randn(661500, 1).numpy(), 44100)
                 with patch("soundfile.write"):  # Mock save to avoid file I/O
                     chunks_received = []
                     for prompt, chunk_audio, chunk_idx in process_streaming(
