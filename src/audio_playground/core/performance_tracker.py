@@ -94,11 +94,11 @@ class PerformanceTracker:
                 import torch
 
                 if self.metrics.device == "cuda" and torch.cuda.is_available():
-                    self.metrics.gpu_memory_allocated_mb = (
-                        torch.cuda.memory_allocated() / (1024 * 1024)
+                    self.metrics.gpu_memory_allocated_mb = torch.cuda.memory_allocated() / (
+                        1024 * 1024
                     )
-                    self.metrics.gpu_memory_reserved_mb = (
-                        torch.cuda.memory_reserved() / (1024 * 1024)
+                    self.metrics.gpu_memory_reserved_mb = torch.cuda.memory_reserved() / (
+                        1024 * 1024
                     )
                 elif self.metrics.device == "mps" and torch.backends.mps.is_available():
                     # MPS doesn't have direct memory query APIs like CUDA

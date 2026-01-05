@@ -38,7 +38,7 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ---
 
-## 🚧 Phase 2: Atomic CLI Commands
+## ✅ Phase 2: Atomic CLI Commands
 
 ### Goal
 

@@ -114,10 +114,9 @@ def process_segments_with_sam_audio(
         enable_prompt_caching: Enable prompt caching
     """
     # Lazy imports for performance
+    import soundfile as sf
     import torch
     from sam_audio import SAMAudio, SAMAudioProcessor
-
-    import soundfile as sf
 
     from audio_playground.core.sam_audio_optimizer import (
         SolverConfig,
@@ -180,7 +179,9 @@ def process_segments_with_sam_audio(
                         # Move to CPU before saving (MPS doesn't support file I/O)
                         # Use soundfile instead of torchaudio for better compatibility
                         audio_np = concatenated.cpu().numpy()
-                        sf.write(output_path.as_posix(), audio_np.T, sr)  # Transpose: soundfile expects (samples, channels)
+                        sf.write(
+                            output_path.as_posix(), audio_np.T, sr
+                        )  # Transpose: soundfile expects (samples, channels)
                         logger.debug(f"Saved: {output_path}")
 
             else:
@@ -212,7 +213,9 @@ def process_segments_with_sam_audio(
                     # Move to CPU before saving (MPS doesn't support file I/O)
                     # Use soundfile instead of torchaudio for better compatibility
                     audio_np = audio_tensor.cpu().numpy()
-                    sf.write(output_path.as_posix(), audio_np.T, sr)  # Transpose: soundfile expects (samples, channels)
+                    sf.write(
+                        output_path.as_posix(), audio_np.T, sr
+                    )  # Transpose: soundfile expects (samples, channels)
                     logger.debug(f"Saved: {output_path}")
 
             logger.info(f"Completed processing {audio_path.name}")
