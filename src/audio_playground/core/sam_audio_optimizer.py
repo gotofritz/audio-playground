@@ -217,7 +217,6 @@ def process_long_audio(
     # Using soundfile which is a torchaudio dependency and has cross-version compatibility
     import soundfile as sf
     import torch
-    import torchaudio
 
     info = sf.info(audio_path.as_posix())
     sample_rate = info.samplerate
@@ -271,17 +270,18 @@ def process_long_audio(
             f"Processing chunk {chunk_idx + 1}/{num_chunks}: {start_time:.1f}s - {end_time:.1f}s"
         )
 
-        # Load chunk
-        waveform, sr = torchaudio.load(
+        # Load chunk using soundfile (avoids torchcodec dependency)
+        waveform_np, sr = sf.read(
             audio_path.as_posix(),
-            frame_offset=start_sample,
-            num_frames=end_sample - start_sample,
+            start=start_sample,
+            stop=end_sample,
+            dtype="float32",
         )
 
         # Save temporary chunk file (SAMAudio requires file path)
         temp_chunk_path = audio_path.parent / f"_temp_chunk_{chunk_idx}.wav"
-        # Use soundfile for better compatibility (torchaudio.save requires torchcodec)
-        sf.write(temp_chunk_path.as_posix(), waveform.numpy().T, sr)
+        # Use soundfile for compatibility
+        sf.write(temp_chunk_path.as_posix(), waveform_np, sr)
 
         try:
             # Process chunk
@@ -375,7 +375,6 @@ def process_streaming(
     # Load audio metadata using soundfile for cross-version compatibility
     import soundfile as sf
     import torch
-    import torchaudio
 
     info = sf.info(audio_path.as_posix())
     sample_rate = info.samplerate
@@ -396,17 +395,18 @@ def process_streaming(
 
         logger.debug(f"Streaming chunk {chunk_idx + 1}/{num_chunks}")
 
-        # Load chunk
-        waveform, sr = torchaudio.load(
+        # Load chunk using soundfile (avoids torchcodec dependency)
+        waveform_np, sr = sf.read(
             audio_path.as_posix(),
-            frame_offset=start_sample,
-            num_frames=end_sample - start_sample,
+            start=start_sample,
+            stop=end_sample,
+            dtype="float32",
         )
 
         # Save temporary chunk file
         temp_chunk_path = audio_path.parent / f"_temp_stream_chunk_{chunk_idx}.wav"
-        # Use soundfile for better compatibility (torchaudio.save requires torchcodec)
-        sf.write(temp_chunk_path.as_posix(), waveform.numpy().T, sr)
+        # Use soundfile for compatibility
+        sf.write(temp_chunk_path.as_posix(), waveform_np, sr)
 
         try:
             # Process chunk

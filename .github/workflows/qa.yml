@@ -37,7 +37,7 @@ jobs:
           pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
 
           # Install other dependencies
-          pip install pydub click rich pydantic pydantic-settings
+          pip install pydub click rich pydantic pydantic-settings soundfile
 
           # Install the package in editable mode (skip sam-audio dependency for CI)
           pip install -e . --no-deps
