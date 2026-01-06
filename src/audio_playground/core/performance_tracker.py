@@ -108,12 +108,12 @@ class PerformanceTracker:
 
         Args:
             command_name: Name of the command being tracked
-            output_dir: Directory to save performance report (None = current directory)
+            output_dir: Directory to save performance report (None = /tmp/audio-playground-performance)
             enabled: Whether tracking is enabled
             logger: Optional logger for output
         """
         self.command_name = command_name
-        self.output_dir = output_dir or Path.cwd()
+        self.output_dir = output_dir or Path("/tmp/audio-playground-performance")
         self.enabled = enabled
         self.logger = logger or logging.getLogger(__name__)
         self.metrics = PerformanceMetrics(command_name=command_name)
@@ -251,7 +251,7 @@ def performance_tracker(
 
     Args:
         command_name: Name of the command (None = use function name)
-        output_dir: Directory to save report (None = current directory)
+        output_dir: Directory to save report (None = /tmp/audio-playground-performance)
         save_report: Whether to automatically save report
         enabled: Whether tracking is enabled
 
@@ -266,7 +266,7 @@ def performance_tracker(
         @functools.wraps(func)
         def wrapper(*args: Any, **kwargs: Any) -> Any:
             # Determine command name
-            cmd_name = command_name or func.__name__
+            cmd_name = command_name or getattr(func, "__name__", "unknown")
 
             # Try to extract output_dir from arguments
             report_dir = output_dir

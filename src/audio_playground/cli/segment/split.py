@@ -76,9 +76,7 @@ def split(
 
         # Add final metadata
         tracker.add_metadata("segments_created", len(segment_files))
-        tracker.add_metadata(
-            "segment_lengths", [round(length, 2) for length in segment_lengths]
-        )
+        tracker.add_metadata("segment_lengths", [round(length, 2) for length in segment_lengths])
 
         # Report results
         click.echo(f"\nCreated {len(segment_files)} segments:")
@@ -93,4 +91,5 @@ def split(
     finally:
         # Finalize and save performance report
         tracker.stop()
-        tracker.save_report()
+        report_path = tracker.save_report()
+        click.echo(f"Performance report: {report_path}")

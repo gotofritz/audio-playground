@@ -290,4 +290,5 @@ def sam_audio(
         # Save performance report if tracker was initialized
         if tracker is not None:
             tracker.stop()
-            tracker.save_report()
+            report_path = tracker.save_report()
+            click.echo(f"Performance report: {report_path}")

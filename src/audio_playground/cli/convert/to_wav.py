@@ -62,4 +62,5 @@ def to_wav(
     finally:
         # Finalize and save performance report
         tracker.stop()
-        tracker.save_report()
+        report_path = tracker.save_report()
+        click.echo(f"Performance report: {report_path}")
