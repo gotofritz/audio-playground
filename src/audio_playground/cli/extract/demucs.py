@@ -8,7 +8,7 @@ import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import output_dir_option, src_option, suffix_option
-from audio_playground.cli.extract.process_demucs import process_audio_with_demucs
+from audio_playground.core.demucs_processor import process_audio_with_demucs
 from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.wav_converter import convert_to_wav
 

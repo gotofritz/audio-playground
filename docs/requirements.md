@@ -12,13 +12,13 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 4 In Progress (Step 4.1 Complete)
+**Current Phase:** Phase 4 In Progress (Steps 4.1-4.2 Complete)
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
 - ✅ Phase 2: Complete (All atomic and composite commands implemented)
 - ✅ Phase 3: Complete (Restructured to src layout, replaced mypy with ty)
-- ⏳ Phase 4: In Progress (Step 4.1 Complete - Performance profiling added)
+- ⏳ Phase 4: In Progress (Steps 4.1-4.2 Complete - Performance profiling added, deprecated commands removed)
 - ⏳ Phase 5: Not Started
 - ⏳ Phase 6: Not Started
 - ⏳ Phase 7: Not Started
@@ -79,13 +79,13 @@ Support both SAM-Audio and Demucs models.
 
 ## ⏳ Phase 4: Performance Profiling & Terminology Rationalization
 
-**Status:** In Progress (Step 4.1 Complete)
+**Status:** In Progress (Steps 4.1-4.2 Complete)
 
 **Goals:**
 
 1. ✅ Add performance profiling to all CLI commands
 2. Rationalize terminology to use "chunk" consistently throughout the project
-3. Remove deprecated commands
+3. ✅ Remove deprecated commands
 4. Add optional overlap support for chunk-based operations
 5. Clean up legacy arguments
 
@@ -93,14 +93,9 @@ Support both SAM-Audio and Demucs models.
 
 **Status:** ✅ Complete - Created `PerformanceTracker` class with execution time and memory tracking, YAML report generation, decorator support. Integrated into all CLI commands (convert, segment, merge, extract sam-audio, extract demucs). Comprehensive test suite added in `tests/core/test_performance_tracker.py`.
 
-### Step 4.2: Remove Deprecated Commands
+### Step 4.2: Remove Deprecated Commands ✅
 
-**Commands to Remove:**
-
-- `extract process-sam-audio` (if not already removed)
-- `extract process-demucs` (if not already removed)
-
-**Rationale:** These intermediate commands are not needed. Use the composite commands `extract sam-audio` and `extract demucs` instead.
+**Status:** ✅ Complete - Removed `extract process-sam-audio` and `extract process-demucs` commands. Users should use the composite commands `extract sam-audio` and `extract demucs` instead.
 
 ### Step 4.3: Rationalize Terminology - Use "Chunk" Consistently
 
