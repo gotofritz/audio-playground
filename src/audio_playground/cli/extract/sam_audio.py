@@ -13,10 +13,10 @@ from audio_playground.cli.common import (
     src_option,
     window_size_option,
 )
-from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
 from audio_playground.core.merger import concatenate_segments
 from audio_playground.core.performance_tracker import PerformanceTracker
+from audio_playground.core.sam_audio_processor import process_segments_with_sam_audio
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
