@@ -69,9 +69,11 @@ requires-python = ">=3.12"
 dependencies = [
   "click>=8.1.7",
   "demucs@git+https://github.com/gotofritz/demucs.git",
+  "psutil>=6.0.0",
   "pydantic-settings>=2.6.1",
   "pydantic>=2.10.6",
   "pydub",
+  "PyYAML>=6.0",
   "rich>=14",
   "sam-audio@file:///Users/fritz/work/sam-audio-playground/sam-audio",
   "torch",
@@ -81,6 +83,8 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
   "copier>=9",
+  "psutil>=6.0.0",
+  "PyYAML>=6.0",
   "commitizen>=4.11.0",
   "faker>=40.1.0",
   "polyfactory>=3.2.0",

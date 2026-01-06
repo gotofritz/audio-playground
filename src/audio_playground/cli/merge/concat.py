@@ -7,6 +7,7 @@ import click
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import input_dir_option, pattern_option, target_option
 from audio_playground.core.merger import concatenate_segments
+from audio_playground.core.performance_tracker import PerformanceTracker
 
 
 @click.command()
@@ -32,36 +33,68 @@ def concat(
     """
     logger = app_context.logger
 
-    click.echo(f"Searching for files matching '{pattern}' in {input_dir}...")
-    logger.info(f"Concatenating files: pattern={pattern}, input_dir={input_dir}")
+    # Initialize performance tracker
+    tracker = PerformanceTracker(
+        command_name="merge concat",
+        output_dir=target.parent,
+        logger=logger,
+    )
+    tracker.start()
 
-    # Find all matching files
-    segment_files = sorted(input_dir.glob(pattern))
+    try:
+        click.echo(f"Searching for files matching '{pattern}' in {input_dir}...")
+        logger.info(f"Concatenating files: pattern={pattern}, input_dir={input_dir}")
 
-    if not segment_files:
-        click.echo(f"Error: No files found matching pattern '{pattern}' in {input_dir}", err=True)
-        raise click.Abort()
+        # Find all matching files
+        segment_files = sorted(input_dir.glob(pattern))
 
-    click.echo(f"Found {len(segment_files)} files to concatenate:")
-    for i, seg_file in enumerate(segment_files[:5]):  # Show first 5
-        click.echo(f"  {seg_file.name}")
-    if len(segment_files) > 5:
-        click.echo(f"  ... and {len(segment_files) - 5} more")
+        if not segment_files:
+            click.echo(
+                f"Error: No files found matching pattern '{pattern}' in {input_dir}", err=True
+            )
+            raise click.Abort()
 
-    # Concatenate segments
-    logger.info(f"Concatenating {len(segment_files)} segments...")
-    concatenated = concatenate_segments(segment_files)
+        # Add metadata
+        tracker.add_metadata("input_dir", str(input_dir))
+        tracker.add_metadata("pattern", pattern)
+        tracker.add_metadata("files_found", len(segment_files))
 
-    # Save output
-    import torchaudio
+        click.echo(f"Found {len(segment_files)} files to concatenate:")
+        for i, seg_file in enumerate(segment_files[:5]):  # Show first 5
+            click.echo(f"  {seg_file.name}")
+        if len(segment_files) > 5:
+            click.echo(f"  ... and {len(segment_files) - 5} more")
 
-    # Create parent directory if needed
-    target.parent.mkdir(parents=True, exist_ok=True)
+        # Concatenate segments
+        logger.info(f"Concatenating {len(segment_files)} segments...")
+        concatenated = concatenate_segments(segment_files)
 
-    # Get sample rate from first file
-    _, sample_rate = torchaudio.load(segment_files[0])
+        # Save output
+        import torchaudio
 
-    torchaudio.save(target.as_posix(), concatenated, int(sample_rate))
+        # Create parent directory if needed
+        target.parent.mkdir(parents=True, exist_ok=True)
 
-    click.echo(f"\nSuccessfully concatenated to: {target}")
-    logger.info(f"Concatenation complete: {target}")
+        # Get sample rate from first file
+        _, sample_rate = torchaudio.load(segment_files[0])
+
+        torchaudio.save(target.as_posix(), concatenated, int(sample_rate))
+
+        # Add final metadata
+        tracker.add_metadata("target_file", str(target))
+        tracker.add_metadata("sample_rate", int(sample_rate))
+        if target.exists():
+            from audio_playground.core.wav_converter import load_audio_duration
+
+            audio_duration = load_audio_duration(target)
+            tracker.add_metadata("audio_duration_seconds", round(audio_duration, 2))
+            tracker.add_metadata("output_size_mb", round(target.stat().st_size / (1024 * 1024), 2))
+
+        click.echo(f"\nSuccessfully concatenated to: {target}")
+        logger.info(f"Concatenation complete: {target}")
+
+    finally:
+        # Finalize and save performance report
+        tracker.stop()
+        report_path = tracker.save_report()
+        click.echo(f"Performance report: {report_path}")

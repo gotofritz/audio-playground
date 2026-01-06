@@ -16,6 +16,7 @@ from audio_playground.cli.common import (
 from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
 from audio_playground.core.merger import concatenate_segments
+from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
@@ -76,11 +77,14 @@ def sam_audio(
     This command orchestrates the atomic commands to provide a complete
     SAM-Audio extraction workflow with optional residual chaining.
     """
-    try:
-        app_context: AppContext = ctx.obj
-        logger = app_context.logger
-        config = app_context.app_config
+    app_context: AppContext = ctx.obj
+    logger = app_context.logger
+    config = app_context.app_config
 
+    # Initialize performance tracker (will be configured after output_dir is determined)
+    tracker: PerformanceTracker | None = None
+
+    try:
         # Override config with CLI arguments if provided
         if src:
             config.source_file = src
@@ -103,6 +107,26 @@ def sam_audio(
         src_path = Path(config.source_file) if config.source_file else None
         if not src_path and not src and not continue_from:
             raise ValueError("No source file specified (use --src or set in config)")
+
+        # Initialize performance tracker now that we have the output directory
+        tracker = PerformanceTracker(
+            command_name="extract sam-audio",
+            output_dir=config.target_dir,
+            logger=logger,
+        )
+        tracker.start()
+
+        # Add metadata
+        if src_path:
+            tracker.add_metadata("source_file", str(src_path))
+        tracker.add_metadata("prompts", config.prompts)
+        tracker.add_metadata("chain_residuals", config.chain_residuals)
+        tracker.add_metadata("segment_window_size", config.segment_window_size)
+        tracker.add_metadata("model", config.model_item.value)
+        if config.sample_rate:
+            tracker.add_metadata("sample_rate", config.sample_rate)
+        if config.max_segments:
+            tracker.add_metadata("max_segments", config.max_segments)
 
         # Log final configuration
         logger.info("Starting SAM-Audio extraction pipeline...")
@@ -141,10 +165,12 @@ def sam_audio(
             convert_to_wav(src_path, wav_file)
             logger.info(f"Converted to: {wav_file}")
 
+            # Track total audio duration for performance metrics
+            total_duration = load_audio_duration(wav_file)
+            tracker.add_metadata("audio_duration_seconds", round(total_duration, 2))
+
             # Step 2: Segment audio
             logger.info("=== Step 2/4: Segmenting audio ===")
-
-            total_duration = load_audio_duration(wav_file)
             logger.info(f"Total audio length: {total_duration:.2f} seconds")
 
             segment_lengths = create_segments(
@@ -260,3 +286,9 @@ def sam_audio(
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}")
         ctx.exit(1)
+    finally:
+        # Save performance report if tracker was initialized
+        if tracker is not None:
+            tracker.stop()
+            report_path = tracker.save_report()
+            click.echo(f"Performance report: {report_path}")
