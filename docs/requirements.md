@@ -193,20 +193,6 @@ Support both SAM-Audio and Demucs models.
 
 - Add a test that starts from a 40s .wav file, chunks it into 10 sec windows with 2 seconds overlap, merges it back - the initial and final file should be identical length and pretty much identical content (minimal degradation due to processing is acceptable)
 
-### Step 4.6: Remove Legacy Arguments
-
-**Arguments to Remove:**
-
-- `--continue-from` (if still present in any commands)
-- Any other deprecated or unused arguments found during refactoring
-
-**Process:**
-
-- Search codebase for `continue_from`
-- Remove from CLI option definitions
-- Remove from function signatures
-- Update tests
-
 ---
 
 ## ⏳ Phase 5: Advanced ODE Control & MLX Backend Integration
