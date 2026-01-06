@@ -12,13 +12,13 @@ Transform the monolithic `extract sam-audio` command into a modular, testable, c
 
 ## Implementation Status
 
-**Current Phase:** Phase 4 In Progress (Steps 4.1-4.2 Complete)
+**Current Phase:** Phase 4 In Progress (Steps 4.1-4.4 Complete)
 
 - ✅ Phase 0: Complete
 - ✅ Phase 1: Complete
 - ✅ Phase 2: Complete (All atomic and composite commands implemented)
 - ✅ Phase 3: Complete (Restructured to src layout, replaced mypy with ty)
-- ⏳ Phase 4: In Progress (Steps 4.1-4.2 Complete - Performance profiling added, deprecated commands removed)
+- ⏳ Phase 4: In Progress (Steps 4.1-4.4 Complete - Performance profiling, deprecated commands removed, wrapper classes added)
 - ⏳ Phase 5: Not Started
 - ⏳ Phase 6: Not Started
 - ⏳ Phase 7: Not Started
@@ -79,15 +79,16 @@ Support both SAM-Audio and Demucs models.
 
 ## ⏳ Phase 4: Performance Profiling & Terminology Rationalization
 
-**Status:** In Progress (Steps 4.1-4.2 Complete)
+**Status:** In Progress (Steps 4.1-4.4 Complete)
 
 **Goals:**
 
 1. ✅ Add performance profiling to all CLI commands
 2. Rationalize terminology to use "chunk" consistently throughout the project
 3. ✅ Remove deprecated commands
-4. Add optional overlap support for chunk-based operations
-5. Clean up legacy arguments
+4. ✅ Add wrapper classes for separators
+5. Add optional overlap support for chunk-based operations
+6. Clean up legacy arguments
 
 ### Step 4.1: Create Performance Profiler ✅
 
@@ -133,9 +134,9 @@ Support both SAM-Audio and Demucs models.
 - `docs/requirements.md`
 - `README.md`
 
-### Step 4.4: Add Wrapper Classes SeparatorDemucs and SeparatorSAMAudio
+### Step 4.4: Add Wrapper Classes SeparatorDemucs and SeparatorSAMAudio ✅
 
-Just wrapper classes for those models, to hide the implementation details from the commands using them
+**Status:** ✅ Complete - Created `SeparatorDemucs` in `core/separator_demucs.py` and `SeparatorSAMAudio` in `core/separator_sam_audio.py`. These wrapper classes encapsulate model loading and processing logic, hiding implementation details from commands.
 
 ### Step 4.5: Add --no-chunks Option
 
