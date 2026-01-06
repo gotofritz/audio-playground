@@ -154,7 +154,11 @@ Support both SAM-Audio and Demucs models.
 - When set, process entire audio file without splitting
 - Mutually exclusive with `--chunk-duration`, `--max-chunks`
 
-### Step 4.5: Add Optional Overlap Window for Chunks
+### Step 4.5: Add Wrapper Classes SeparatorDemucs and SeparatorSAMAudio
+
+Just wrapper classes for those models, to hide the implementation details from the commands using them
+
+### Step 4.6: Add Optional Overlap Window for Chunks
 
 **Requirement:** Add overlap support to chunk-based operations to improve quality at chunk boundaries.
 
