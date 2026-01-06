@@ -133,7 +133,11 @@ Support both SAM-Audio and Demucs models.
 - `docs/requirements.md`
 - `README.md`
 
-### Step 4.4: Add --no-chunks Option
+### Step 4.4: Add Wrapper Classes SeparatorDemucs and SeparatorSAMAudio
+
+Just wrapper classes for those models, to hide the implementation details from the commands using them
+
+### Step 4.5: Add --no-chunks Option
 
 **Requirement:** If a command accepts a `--chunk-duration` argument, it should also accept a `--no-chunks` flag to disable chunking entirely.
 
@@ -148,10 +152,6 @@ Support both SAM-Audio and Demucs models.
 - Add `--no-chunks` as a boolean flag
 - When set, process entire audio file without splitting
 - Mutually exclusive with `--chunk-duration`, `--max-chunks`
-
-### Step 4.5: Add Wrapper Classes SeparatorDemucs and SeparatorSAMAudio
-
-Just wrapper classes for those models, to hide the implementation details from the commands using them
 
 ### Step 4.6: Add Optional Overlap Window for Chunks
 
