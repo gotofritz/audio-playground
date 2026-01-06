@@ -13,10 +13,10 @@ from audio_playground.cli.common import (
     src_option,
     window_size_option,
 )
-from audio_playground.cli.extract.process_sam_audio import process_segments_with_sam_audio
 from audio_playground.config.app_config import Model
 from audio_playground.core.merger import concatenate_segments
 from audio_playground.core.performance_tracker import PerformanceTracker
+from audio_playground.core.sam_audio_processor import process_segments_with_sam_audio
 from audio_playground.core.segmenter import create_segments, split_to_files
 from audio_playground.core.wav_converter import convert_to_wav, load_audio_duration
 
@@ -29,11 +29,6 @@ from audio_playground.core.wav_converter import convert_to_wav, load_audio_durat
     multiple=True,
     type=str,
     help="Text prompts to separate. Overrides config.",
-)
-@click.option(
-    "--continue-from",
-    type=click.Path(exists=True),
-    help="Continue from existing temp directory (skip conversion/segmentation).",
 )
 @click.option(
     "--model",
@@ -58,7 +53,6 @@ def sam_audio(
     src: Path | None,
     output_dir: Path | None,
     prompts: tuple[str, ...],
-    continue_from: str | None,
     model: Model | None = None,
     chain_residuals: bool | None = None,
     sample_rate: int | None = None,
@@ -105,13 +99,17 @@ def sam_audio(
 
         # Validate required parameters
         src_path = Path(config.source_file) if config.source_file else None
-        if not src_path and not src and not continue_from:
+        if not src_path and not src:
             raise ValueError("No source file specified (use --src or set in config)")
+
+        # Generate unique temp directory for this run
+        run_id = str(uuid.uuid4())
+        tmp_path = config.temp_dir / run_id
 
         # Initialize performance tracker now that we have the output directory
         tracker = PerformanceTracker(
             command_name="extract sam-audio",
-            output_dir=config.target_dir,
+            output_dir=tmp_path,
             logger=logger,
         )
         tracker.start()
@@ -140,63 +138,45 @@ def sam_audio(
         if config.max_segments:
             logger.info(f"Max segments: {config.max_segments}")
 
-        # Determine temp directory
-        if continue_from:
-            logger.info(f"Continuing from: {continue_from}")
-            tmp_path = Path(continue_from)
-            wav_file = tmp_path / "audio.wav"
-            if not wav_file.exists():
-                raise FileNotFoundError(f"Cannot continue: {wav_file} not found in {tmp_path}")
-        else:
-            # Generate unique temp directory for this run
-            run_id = str(uuid.uuid4())
-            base_tmp = Path(config.temp_dir)
-            tmp_path = base_tmp / run_id
-            tmp_path.mkdir(parents=True, exist_ok=True)
-            logger.info(f"Using temp directory: {tmp_path}")
+        tmp_path.mkdir(parents=True, exist_ok=True)
+        logger.info(f"Using temp directory: {tmp_path}")
 
-            # Step 1: Convert to WAV
-            logger.info("=== Step 1/4: Converting to WAV ===")
+        # Step 1: Convert to WAV
+        logger.info("=== Step 1/4: Converting to WAV ===")
 
-            # Ensure src_path is not None (validated earlier)
-            assert src_path is not None, "Source path must be specified"
+        # Ensure src_path is not None (validated earlier)
+        assert src_path is not None, "Source path must be specified"
 
-            wav_file = tmp_path / "audio.wav"
-            convert_to_wav(src_path, wav_file)
-            logger.info(f"Converted to: {wav_file}")
+        wav_file = tmp_path / "audio.wav"
+        convert_to_wav(src_path, wav_file)
+        logger.info(f"Converted to: {wav_file}")
 
-            # Track total audio duration for performance metrics
-            total_duration = load_audio_duration(wav_file)
-            tracker.add_metadata("audio_duration_seconds", round(total_duration, 2))
+        # Track total audio duration for performance metrics
+        total_duration = load_audio_duration(wav_file)
+        tracker.add_metadata("audio_duration_seconds", round(total_duration, 2))
 
-            # Step 2: Segment audio
-            logger.info("=== Step 2/4: Segmenting audio ===")
-            logger.info(f"Total audio length: {total_duration:.2f} seconds")
+        # Step 2: Segment audio
+        logger.info("=== Step 2/4: Segmenting audio ===")
+        logger.info(f"Total audio length: {total_duration:.2f} seconds")
 
-            segment_lengths = create_segments(
-                total_duration,
-                window_size=config.segment_window_size,
-                max_segments=config.max_segments,
-            )
-            logger.info(
-                f"Creating {len(segment_lengths)} segments "
-                f"({config.segment_window_size}s window): "
-                f"{[round(s, 2) for s in segment_lengths]}"
-            )
+        segment_lengths = create_segments(
+            total_duration,
+            window_size=config.segment_window_size,
+            max_segments=config.max_segments,
+        )
+        logger.info(
+            f"Creating {len(segment_lengths)} segments "
+            f"({config.segment_window_size}s window): "
+            f"{[round(s, 2) for s in segment_lengths]}"
+        )
 
-            segment_files, segment_metadata = split_to_files(wav_file, tmp_path, segment_lengths)
-            logger.info(f"Created {len(segment_files)} segments in {tmp_path}")
+        segment_files, segment_metadata = split_to_files(wav_file, tmp_path, segment_lengths)
+        logger.info(f"Created {len(segment_files)} segments in {tmp_path}")
 
         # Step 3: Process segments with SAM-Audio
         logger.info("=== Step 3/4: Processing with SAM-Audio ===")
         processed_dir = tmp_path / "processed"
         processed_dir.mkdir(parents=True, exist_ok=True)
-
-        # Find segment files if continuing
-        if continue_from:
-            segment_files = sorted(tmp_path.glob("segment-*.wav"))
-            if not segment_files:
-                raise FileNotFoundError(f"No segment-*.wav files found in {tmp_path}")
 
         # Determine device
         device = config.device

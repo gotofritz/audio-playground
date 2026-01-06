@@ -19,7 +19,7 @@ class AudioPlaygroundConfig(BaseSettings):
 
     # Audio processing settings
     source_file: Path | None = None
-    target_dir: Path = Path("../wav")
+    target_dir: Path = Path("./")
     temp_dir: Path = Path("/tmp/sam_audio_split")
     prompts: list[str] = ["bass"]
 

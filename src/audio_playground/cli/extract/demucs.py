@@ -8,7 +8,7 @@ import click
 
 from audio_playground.app_context import AppContext
 from audio_playground.cli.common import output_dir_option, src_option, suffix_option
-from audio_playground.cli.extract.process_demucs import process_audio_with_demucs
+from audio_playground.core.demucs_processor import process_audio_with_demucs
 from audio_playground.core.performance_tracker import PerformanceTracker
 from audio_playground.core.wav_converter import convert_to_wav
 
@@ -92,10 +92,13 @@ def demucs(
     logger = app_context.logger
     config = app_context.app_config
 
+    run_id = str(uuid.uuid4())
+    tmp_path = config.temp_dir / run_id
+
     # Initialize performance tracker
     tracker = PerformanceTracker(
         command_name="extract demucs",
-        output_dir=output_dir,
+        output_dir=tmp_path,
         logger=logger,
     )
     tracker.start()
@@ -126,9 +129,6 @@ def demucs(
         logger.info(f"Progress bar: {'enabled' if show_progress else 'disabled'}")
 
         # Generate unique temp directory for this run
-        run_id = str(uuid.uuid4())
-        base_tmp = Path(config.temp_dir)
-        tmp_path = base_tmp / run_id
         tmp_path.mkdir(parents=True, exist_ok=True)
         logger.info(f"Using temp directory: {tmp_path}")
 
