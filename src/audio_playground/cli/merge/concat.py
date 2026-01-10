@@ -93,8 +93,14 @@ def concat(
         click.echo(f"\nSuccessfully concatenated to: {target}")
         logger.info(f"Concatenation complete: {target}")
 
-    finally:
-        # Finalize and save performance report
+    except KeyboardInterrupt:
+        # Stop tracker but don't save report on user interrupt
         tracker.stop()
-        report_path = tracker.save_report()
-        click.echo(f"Performance report: {report_path}")
+        click.echo("\nInterrupted by user")
+        raise
+    finally:
+        # Finalize and save performance report (only if not interrupted)
+        if tracker.metrics.end_time is None:
+            tracker.stop()
+            report_path = tracker.save_report()
+            click.echo(f"Performance report: {report_path}")

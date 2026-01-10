@@ -261,14 +261,20 @@ def sam_audio(
         logger.info("All done!")
         logger.info(f"Output saved to: {target_path}")
 
+    except KeyboardInterrupt:
+        # Stop tracker but don't save report on user interrupt
+        if tracker is not None:
+            tracker.stop()
+        click.echo("\nInterrupted by user")
+        raise
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}")
         ctx.exit(1)
     finally:
-        # Save performance report if tracker was initialized
-        if tracker is not None:
+        # Save performance report if tracker was initialized (only if not interrupted)
+        if tracker is not None and tracker.metrics.end_time is None:
             tracker.stop()
             report_path = tracker.save_report()
             click.echo(f"Performance report: {report_path}")

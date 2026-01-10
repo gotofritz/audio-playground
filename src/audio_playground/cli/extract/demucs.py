@@ -178,13 +178,19 @@ def demucs(
         logger.info("All done!")
         logger.info(f"Separated stems saved to: {output_dir}")
 
+    except KeyboardInterrupt:
+        # Stop tracker but don't save report on user interrupt
+        tracker.stop()
+        click.echo("\nInterrupted by user")
+        raise
     except Exception as e:
         logger.error(f"Error occurred: {type(e).__name__}: {str(e)}")
         logger.error(f"Traceback:\n{traceback.format_exc()}")
         click.echo(f"CLI Error: {type(e).__name__}: {str(e) or '(no error message)'}", err=True)
         ctx.exit(1)
     finally:
-        # Save performance report
-        tracker.stop()
-        report_path = tracker.save_report()
-        click.echo(f"Performance report: {report_path}")
+        # Save performance report (only if not interrupted)
+        if tracker.metrics.end_time is None:
+            tracker.stop()
+            report_path = tracker.save_report()
+            click.echo(f"Performance report: {report_path}")
